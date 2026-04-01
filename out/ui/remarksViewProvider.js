@@ -46,8 +46,10 @@ class RemarksViewProvider {
         this.#repo = args.repo;
         this.#repo.onDidChange(() => void this.refresh());
         vscode.workspace.onDidChangeConfiguration((e) => {
-            if (e.affectsConfiguration("traeFolderRemarks.displayPathStyle"))
+            if (e.affectsConfiguration("traeFolderRemarks.displayPathStyle") ||
+                e.affectsConfiguration("traeFolderRemarks.language")) {
                 void this.refresh();
+            }
         });
     }
     resolveWebviewView(view) {
@@ -69,28 +71,28 @@ class RemarksViewProvider {
                 return;
             }
             if (type === "add") {
-                await vscode.commands.executeCommand("traeFolderRemarks.addRemark");
+                await vscode.commands.executeCommand("traeFolderRemarks.setRemark");
                 return;
             }
             if (type === "open") {
                 const folderUri = msg.folderUri;
                 if (typeof folderUri !== "string")
                     return;
-                await vscode.commands.executeCommand("traeFolderRemarks.openResource", vscode.Uri.parse(folderUri));
+                await vscode.commands.executeCommand("traeFolderRemarks.openResource", resourceKeyToUri(folderUri));
                 return;
             }
             if (type === "edit") {
                 const folderUri = msg.folderUri;
                 if (typeof folderUri !== "string")
                     return;
-                await vscode.commands.executeCommand("traeFolderRemarks.editRemark", vscode.Uri.parse(folderUri));
+                await vscode.commands.executeCommand("traeFolderRemarks.setRemark", resourceKeyToUri(folderUri));
                 return;
             }
             if (type === "delete") {
                 const folderUri = msg.folderUri;
                 if (typeof folderUri !== "string")
                     return;
-                await vscode.commands.executeCommand("traeFolderRemarks.deleteRemark", vscode.Uri.parse(folderUri));
+                await vscode.commands.executeCommand("traeFolderRemarks.deleteRemark", folderUri);
                 return;
             }
         });
@@ -113,7 +115,8 @@ class RemarksViewProvider {
             remarkName: formatRemarkDisplay(r.remarkName),
             displayPath: displayPathStyle === "absolute" ? resourceKeyToFsPath(r.folderUri) : resourceKeyToRelativePath(r.folderUri)
         }));
-        return { remarks: withDisplayPath, displayPathStyle };
+        const lang = resolveUiLanguage();
+        return { remarks: withDisplayPath, displayPathStyle, lang, ui: getUiStrings(lang) };
     }
 }
 exports.RemarksViewProvider = RemarksViewProvider;
@@ -135,5 +138,47 @@ function resourceKeyToFsPath(resourceKey) {
         return root.fsPath;
     const segments = normalized.split("/").filter(Boolean);
     return vscode.Uri.joinPath(root, ...segments).fsPath;
+}
+function resourceKeyToUri(resourceKey) {
+    const root = vscode.workspace.workspaceFolders?.[0]?.uri;
+    if (!root)
+        return undefined;
+    const normalized = (resourceKey || ".").replace(/\\/gu, "/").replace(/^[.][/]/u, "");
+    if (normalized === "." || normalized === "")
+        return root;
+    const segments = normalized.split("/").filter(Boolean);
+    return vscode.Uri.joinPath(root, ...segments);
+}
+function resolveUiLanguage() {
+    const cfg = vscode.workspace.getConfiguration();
+    const raw = cfg.get("traeFolderRemarks.language", "auto");
+    if (raw === "en" || raw === "zh-cn")
+        return raw;
+    const envLang = vscode.env.language.toLowerCase();
+    return envLang.startsWith("zh") ? "zh-cn" : "en";
+}
+function getUiStrings(lang) {
+    if (lang === "zh-cn") {
+        return {
+            title: "工作区备注",
+            searchPlaceholder: "搜索备注…",
+            setButton: "设置",
+            emptyLine1: "暂无备注。",
+            emptyLine2: "点击“设置”或在资源管理器中右键文件/文件夹进行设置。",
+            actionOpen: "打开",
+            actionSet: "设置",
+            actionDelete: "删除"
+        };
+    }
+    return {
+        title: "Workspace Remarks",
+        searchPlaceholder: "Search remarks...",
+        setButton: "Set",
+        emptyLine1: "No remarks yet.",
+        emptyLine2: "Use the Set button or right-click a file/folder in the Explorer.",
+        actionOpen: "Open",
+        actionSet: "Set",
+        actionDelete: "Delete"
+    };
 }
 //# sourceMappingURL=remarksViewProvider.js.map

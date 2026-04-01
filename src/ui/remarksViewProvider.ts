@@ -14,7 +14,12 @@ export class RemarksViewProvider implements vscode.WebviewViewProvider {
     this.#repo = args.repo;
     this.#repo.onDidChange(() => void this.refresh());
     vscode.workspace.onDidChangeConfiguration((e: vscode.ConfigurationChangeEvent) => {
-      if (e.affectsConfiguration("traeFolderRemarks.displayPathStyle")) void this.refresh();
+      if (
+        e.affectsConfiguration("traeFolderRemarks.displayPathStyle") ||
+        e.affectsConfiguration("traeFolderRemarks.language")
+      ) {
+        void this.refresh();
+      }
     });
   }
 
@@ -39,28 +44,28 @@ export class RemarksViewProvider implements vscode.WebviewViewProvider {
       }
 
       if (type === "add") {
-        await vscode.commands.executeCommand("traeFolderRemarks.addRemark");
+        await vscode.commands.executeCommand("traeFolderRemarks.setRemark");
         return;
       }
 
       if (type === "open") {
         const folderUri = (msg as { folderUri?: string }).folderUri;
         if (typeof folderUri !== "string") return;
-        await vscode.commands.executeCommand("traeFolderRemarks.openResource", vscode.Uri.parse(folderUri));
+        await vscode.commands.executeCommand("traeFolderRemarks.openResource", resourceKeyToUri(folderUri));
         return;
       }
 
       if (type === "edit") {
         const folderUri = (msg as { folderUri?: string }).folderUri;
         if (typeof folderUri !== "string") return;
-        await vscode.commands.executeCommand("traeFolderRemarks.editRemark", vscode.Uri.parse(folderUri));
+        await vscode.commands.executeCommand("traeFolderRemarks.setRemark", resourceKeyToUri(folderUri));
         return;
       }
 
       if (type === "delete") {
         const folderUri = (msg as { folderUri?: string }).folderUri;
         if (typeof folderUri !== "string") return;
-        await vscode.commands.executeCommand("traeFolderRemarks.deleteRemark", vscode.Uri.parse(folderUri));
+        await vscode.commands.executeCommand("traeFolderRemarks.deleteRemark", folderUri);
         return;
       }
     });
@@ -78,6 +83,17 @@ export class RemarksViewProvider implements vscode.WebviewViewProvider {
   private buildViewState(): {
     remarks: ReadonlyArray<{ folderUri: string; remarkName: string; displayPath: string }>;
     displayPathStyle: "relative" | "absolute";
+    lang: "en" | "zh-cn";
+    ui: {
+      title: string;
+      searchPlaceholder: string;
+      setButton: string;
+      emptyLine1: string;
+      emptyLine2: string;
+      actionOpen: string;
+      actionSet: string;
+      actionDelete: string;
+    };
   } {
     const displayPathStyle = vscode.workspace
       .getConfiguration()
@@ -88,7 +104,8 @@ export class RemarksViewProvider implements vscode.WebviewViewProvider {
       displayPath:
         displayPathStyle === "absolute" ? resourceKeyToFsPath(r.folderUri) : resourceKeyToRelativePath(r.folderUri)
     }));
-    return { remarks: withDisplayPath, displayPathStyle };
+    const lang = resolveUiLanguage();
+    return { remarks: withDisplayPath, displayPathStyle, lang, ui: getUiStrings(lang) };
   }
 }
 
@@ -110,4 +127,57 @@ function resourceKeyToFsPath(resourceKey: string): string {
   if (normalized === "." || normalized === "") return root.fsPath;
   const segments = normalized.split("/").filter(Boolean);
   return vscode.Uri.joinPath(root, ...segments).fsPath;
+}
+
+function resourceKeyToUri(resourceKey: string): vscode.Uri | undefined {
+  const root = vscode.workspace.workspaceFolders?.[0]?.uri;
+  if (!root) return undefined;
+  const normalized = (resourceKey || ".").replace(/\\/gu, "/").replace(/^[.][/]/u, "");
+  if (normalized === "." || normalized === "") return root;
+  const segments = normalized.split("/").filter(Boolean);
+  return vscode.Uri.joinPath(root, ...segments);
+}
+
+type UiLang = "en" | "zh-cn";
+
+function resolveUiLanguage(): UiLang {
+  const cfg = vscode.workspace.getConfiguration();
+  const raw = cfg.get<string>("traeFolderRemarks.language", "auto");
+  if (raw === "en" || raw === "zh-cn") return raw;
+  const envLang = vscode.env.language.toLowerCase();
+  return envLang.startsWith("zh") ? "zh-cn" : "en";
+}
+
+function getUiStrings(lang: UiLang): {
+  title: string;
+  searchPlaceholder: string;
+  setButton: string;
+  emptyLine1: string;
+  emptyLine2: string;
+  actionOpen: string;
+  actionSet: string;
+  actionDelete: string;
+} {
+  if (lang === "zh-cn") {
+    return {
+      title: "工作区备注",
+      searchPlaceholder: "搜索备注…",
+      setButton: "设置",
+      emptyLine1: "暂无备注。",
+      emptyLine2: "点击“设置”或在资源管理器中右键文件/文件夹进行设置。",
+      actionOpen: "打开",
+      actionSet: "设置",
+      actionDelete: "删除"
+    };
+  }
+  return {
+    title: "Workspace Remarks",
+    searchPlaceholder: "Search remarks...",
+    setButton: "Set",
+    emptyLine1: "No remarks yet.",
+    emptyLine2: "Use the Set button or right-click a file/folder in the Explorer.",
+    actionOpen: "Open",
+    actionSet: "Set",
+    actionDelete: "Delete"
+  };
 }

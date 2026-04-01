@@ -28,11 +28,13 @@ suite("Workspace Remarks Extension", () => {
     const fileRemark = api.repository.get(fileKey) as { remarkName?: string } | undefined;
     assert.strictEqual(fileRemark?.remarkName, "Keep");
 
+    await vscode.commands.executeCommand("traeFolderRemarks.setRemark", file, "");
+    assert.strictEqual(api.repository.get(fileKey), undefined);
+
     await api.repository.load();
     const afterReload = api.repository.get(oneKey) as { remarkName?: string } | undefined;
     assert.strictEqual(afterReload?.remarkName, "One2");
-    const afterReloadFile = api.repository.get(fileKey) as { remarkName?: string } | undefined;
-    assert.strictEqual(afterReloadFile?.remarkName, "Keep");
+    assert.strictEqual(api.repository.get(fileKey), undefined);
 
     await vscode.commands.executeCommand("traeFolderRemarks.deleteRemark", one, true);
     assert.strictEqual(api.repository.get(oneKey), undefined);

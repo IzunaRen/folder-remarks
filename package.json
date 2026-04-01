@@ -2,7 +2,7 @@
   "name": "trae-folder-remarks",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.1.6",
+  "version": "0.1.12",
   "publisher": "folder-remarks",
   "icon": "resources/icon.png",
   "license": "MIT",
@@ -25,6 +25,7 @@
   "activationEvents": [
     "onStartupFinished",
     "onView:traeFolderRemarksView",
+    "onCommand:traeFolderRemarks.setRemark",
     "onCommand:traeFolderRemarks.addRemark",
     "onCommand:traeFolderRemarks.editRemark",
     "onCommand:traeFolderRemarks.deleteRemark",
@@ -36,18 +37,18 @@
   "contributes": {
     "commands": [
       {
-        "command": "traeFolderRemarks.addRemark",
-        "title": "%command.addRemark.title%",
-        "category": "%command.category%"
-      },
-      {
-        "command": "traeFolderRemarks.editRemark",
-        "title": "%command.editRemark.title%",
+        "command": "traeFolderRemarks.setRemark",
+        "title": "%command.setRemark.title%",
         "category": "%command.category%"
       },
       {
         "command": "traeFolderRemarks.deleteRemark",
         "title": "%command.deleteRemark.title%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "traeFolderRemarks.checkBadges",
+        "title": "%command.checkBadges.title%",
         "category": "%command.category%"
       },
       {
@@ -91,33 +92,68 @@
     "menus": {
       "explorer/context": [
         {
-          "command": "traeFolderRemarks.addRemark",
-          "when": "explorerResourceIsFolder || explorerResourceIsFile"
-        },
-        {
-          "command": "traeFolderRemarks.editRemark",
-          "when": "explorerResourceIsFolder || explorerResourceIsFile"
+          "command": "traeFolderRemarks.setRemark",
+          "when": "resourceScheme == 'file'",
+          "group": "navigation@5"
         },
         {
           "command": "traeFolderRemarks.deleteRemark",
-          "when": "explorerResourceIsFolder || explorerResourceIsFile"
+          "when": "resourceScheme == 'file'",
+          "group": "navigation@6"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "traeFolderRemarks.setRemark",
+          "when": "resourceScheme == 'file'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "traeFolderRemarks.deleteRemark",
+          "when": "resourceScheme == 'file'",
+          "group": "navigation@6"
         }
       ],
       "commandPalette": [
         {
-          "command": "traeFolderRemarks.addRemark"
+          "command": "traeFolderRemarks.setRemark"
         },
         {
           "command": "traeFolderRemarks.manageRemarks"
+        },
+        {
+          "command": "traeFolderRemarks.checkBadges"
         },
         {
           "command": "traeFolderRemarks.debugPing"
         }
       ]
     },
+    "keybindings": [
+      {
+        "command": "traeFolderRemarks.setRemark",
+        "key": "alt+e",
+        "when": "explorerViewletVisible || filesExplorerFocus || editorTextFocus"
+      }
+    ],
     "configuration": {
       "title": "%configuration.title%",
       "properties": {
+        "traeFolderRemarks.language": {
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "en",
+            "zh-cn"
+          ],
+          "enumDescriptions": [
+            "%configuration.language.auto%",
+            "%configuration.language.en%",
+            "%configuration.language.zhCn%"
+          ],
+          "description": "%configuration.language.description%"
+        },
         "traeFolderRemarks.displayPathStyle": {
           "type": "string",
           "default": "relative",

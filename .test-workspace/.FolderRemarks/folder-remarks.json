@@ -1,4 +1,17 @@
 {
   "version": 1,
-  "remarksByFolderUri": {}
+  "remarksByFolderUri": {
+    ".FolderRemarks/folder-remarks.json": {
+      "folderUri": ".FolderRemarks/folder-remarks.json",
+      "remarkName": "懂得都懂",
+      "createdAt": 1775037601869,
+      "updatedAt": 1775037601869
+    },
+    "two/.keep": {
+      "folderUri": "two/.keep",
+      "remarkName": "哒哒哒哒哒",
+      "createdAt": 1775037706747,
+      "updatedAt": 1775037706747
+    }
+  }
 }

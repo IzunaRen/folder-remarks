@@ -6,6 +6,17 @@ export function renderRemarksWebviewHtml(args: {
   initialState: {
     remarks: ReadonlyArray<{ folderUri: string; remarkName: string; displayPath: string }>;
     displayPathStyle: "relative" | "absolute";
+    lang: "en" | "zh-cn";
+    ui: {
+      title: string;
+      searchPlaceholder: string;
+      setButton: string;
+      emptyLine1: string;
+      emptyLine2: string;
+      actionOpen: string;
+      actionSet: string;
+      actionDelete: string;
+    };
   };
 }): string {
   const nonce = createNonce();
@@ -18,12 +29,12 @@ export function renderRemarksWebviewHtml(args: {
   const initialData = JSON.stringify(args.initialState);
 
   return `<!doctype html>
-<html lang="en">
+<html lang="${escapeAttr(args.initialState.lang)}">
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="${csp}" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Workspace Remarks</title>
+    <title>${escapeHtml(args.initialState.ui.title)}</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -108,14 +119,14 @@ export function renderRemarksWebviewHtml(args: {
   </head>
   <body>
     <div class="row">
-      <input id="q" type="search" placeholder="Search remarks..." />
-      <button id="add">Add</button>
+      <input id="q" type="search" placeholder="${escapeAttr(args.initialState.ui.searchPlaceholder)}" />
+      <button id="add">${escapeHtml(args.initialState.ui.setButton)}</button>
     </div>
 
     <div id="list" class="list"></div>
     <div id="empty" class="empty" style="display:none">
-      <div>No remarks yet.</div>
-      <div>Use the Add button or right-click a file/folder in the Explorer.</div>
+      <div>${escapeHtml(args.initialState.ui.emptyLine1)}</div>
+      <div>${escapeHtml(args.initialState.ui.emptyLine2)}</div>
     </div>
 
     <script nonce="${nonce}">
@@ -153,9 +164,9 @@ export function renderRemarksWebviewHtml(args: {
             <div class="title">
               <div class="name">\${escapeHtml(r.remarkName || "【无】")}</div>
               <div class="actions">
-                <button class="action" data-act="open" data-uri="\${encodeAttr(r.folderUri)}">Open</button>
-                <button class="action" data-act="edit" data-uri="\${encodeAttr(r.folderUri)}">Edit</button>
-                <button class="action" data-act="delete" data-uri="\${encodeAttr(r.folderUri)}">Delete</button>
+                <button class="action" data-act="open" data-uri="\${encodeAttr(r.folderUri)}">\${escapeHtml(state.ui.actionOpen)}</button>
+                <button class="action" data-act="edit" data-uri="\${encodeAttr(r.folderUri)}">\${escapeHtml(state.ui.actionSet)}</button>
+                <button class="action" data-act="delete" data-uri="\${encodeAttr(r.folderUri)}">\${escapeHtml(state.ui.actionDelete)}</button>
               </div>
             </div>
             <div class="path">\${escapeHtml(displayPath(r.folderUri))}</div>
@@ -203,6 +214,8 @@ export function renderRemarksWebviewHtml(args: {
         if (msg.type === "state") {
           state.remarks = msg.remarks ?? [];
           state.displayPathStyle = msg.displayPathStyle ?? "relative";
+          state.lang = msg.lang ?? state.lang;
+          state.ui = msg.ui ?? state.ui;
           render();
         }
       });
@@ -212,4 +225,12 @@ export function renderRemarksWebviewHtml(args: {
     </script>
   </body>
 </html>`;
+}
+
+function escapeHtml(str: string): string {
+  return String(str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+}
+
+function escapeAttr(str: string): string {
+  return escapeHtml(str);
 }
