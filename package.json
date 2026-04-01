@@ -1,0 +1,168 @@
+{
+  "name": "trae-folder-remarks",
+  "displayName": "%extension.displayName%",
+  "description": "%extension.description%",
+  "version": "0.1.6",
+  "publisher": "folder-remarks",
+  "icon": "resources/icon.png",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trae-demo/folder-remarks"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:traeFolderRemarksView",
+    "onCommand:traeFolderRemarks.addRemark",
+    "onCommand:traeFolderRemarks.editRemark",
+    "onCommand:traeFolderRemarks.deleteRemark",
+    "onCommand:traeFolderRemarks.openResource",
+    "onCommand:traeFolderRemarks.openFolder",
+    "onCommand:traeFolderRemarks.manageRemarks",
+    "onCommand:traeFolderRemarks.debugPing"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "traeFolderRemarks.addRemark",
+        "title": "%command.addRemark.title%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "traeFolderRemarks.editRemark",
+        "title": "%command.editRemark.title%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "traeFolderRemarks.deleteRemark",
+        "title": "%command.deleteRemark.title%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "traeFolderRemarks.openFolder",
+        "title": "%command.openFolder.title%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "traeFolderRemarks.openResource",
+        "title": "%command.openResource.title%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "traeFolderRemarks.manageRemarks",
+        "title": "%command.manageRemarks.title%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "traeFolderRemarks.debugPing",
+        "title": "%command.debugPing.title%",
+        "category": "%command.category%"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "traeFolderRemarks",
+          "title": "%viewsContainer.title%",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "traeFolderRemarks": [
+        {
+          "id": "traeFolderRemarksView",
+          "name": "%view.folderRemarks.name%"
+        }
+      ]
+    },
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "traeFolderRemarks.addRemark",
+          "when": "explorerResourceIsFolder || explorerResourceIsFile"
+        },
+        {
+          "command": "traeFolderRemarks.editRemark",
+          "when": "explorerResourceIsFolder || explorerResourceIsFile"
+        },
+        {
+          "command": "traeFolderRemarks.deleteRemark",
+          "when": "explorerResourceIsFolder || explorerResourceIsFile"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "traeFolderRemarks.addRemark"
+        },
+        {
+          "command": "traeFolderRemarks.manageRemarks"
+        },
+        {
+          "command": "traeFolderRemarks.debugPing"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "%configuration.title%",
+      "properties": {
+        "traeFolderRemarks.displayPathStyle": {
+          "type": "string",
+          "default": "relative",
+          "enum": [
+            "relative",
+            "absolute"
+          ],
+          "enumDescriptions": [
+            "%configuration.displayPathStyle.relative%",
+            "%configuration.displayPathStyle.absolute%"
+          ],
+          "description": "%configuration.displayPathStyle.description%"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "clean": "rimraf out .tsbuildinfo",
+    "typecheck": "tsc -p . --noEmit",
+    "build": "tsc -p .",
+    "lint": "eslint src",
+    "test:unit": "vitest run",
+    "test:integration": "node ./out/test/runTest.js",
+    "test": "npm run test:unit && npm run build && npm run test:integration",
+    "package": "vsce package --no-dependencies"
+  },
+  "overrides": {
+    "esbuild": "^0.25.1",
+    "serialize-javascript": "^7.0.5"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.7",
+    "@types/node": "^20.11.30",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.7.1",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.1.0",
+    "glob": "^10.4.5",
+    "mocha": "^10.3.0",
+    "prettier": "^3.2.5",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.4.5",
+    "vitest": "^1.4.0"
+  }
+}

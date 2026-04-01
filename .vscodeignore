@@ -1,0 +1,13 @@
+**/*.ts
+src/**
+out/test/**
+vitest.config.ts
+eslint.config.cjs
+eslint.config.js
+.prettierrc.json
+node_modules/**
+.npm-cache/**
+.vscode-test/**
+.vscode/**
+.FolderRemarks/**
+.test-workspace/**

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "remarksByFolderUri": {
+    "node_modules": {
+      "folderUri": "node_modules",
+      "remarkName": "无",
+      "createdAt": 1775030549801,
+      "updatedAt": 1775030549801
+    },
+    "src": {
+      "folderUri": "src",
+      "remarkName": "无",
+      "createdAt": 1775030558780,
+      "updatedAt": 1775030558780
+    }
+  }
+}

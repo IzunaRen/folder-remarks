@@ -1,0 +1,18 @@
+{
+  "extension.displayName": "Workspace Remarks",
+  "extension.description": "Add, search, and manage custom remark names for any file or folder in the current workspace.",
+  "command.category": "Workspace Remarks",
+  "command.addRemark.title": "Add Remark (File/Folder)",
+  "command.editRemark.title": "Edit Remark (File/Folder)",
+  "command.deleteRemark.title": "Delete Remark (File/Folder)",
+  "command.openFolder.title": "Open in Explorer",
+  "command.openResource.title": "Open",
+  "command.manageRemarks.title": "Manage Remarks",
+  "command.debugPing.title": "Debug: Ping (Show Output)",
+  "viewsContainer.title": "Remarks",
+  "view.folderRemarks.name": "Remarks",
+  "configuration.title": "Workspace Remarks",
+  "configuration.displayPathStyle.description": "How paths are displayed in the remarks list.",
+  "configuration.displayPathStyle.relative": "Show paths relative to the workspace.",
+  "configuration.displayPathStyle.absolute": "Show absolute file system paths."
+}

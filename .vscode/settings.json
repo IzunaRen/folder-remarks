@@ -1,0 +1,14 @@
+{
+  "python-envs.pythonProjects": [
+    {
+      "path": "resources",
+      "envManager": "ms-python.python:venv",
+      "packageManager": "ms-python.python:pip"
+    },
+    {
+      "path": ".vscode-test",
+      "envManager": "ms-python.python:venv",
+      "packageManager": "ms-python.python:pip"
+    }
+  ]
+}
