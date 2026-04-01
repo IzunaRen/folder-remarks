@@ -6,6 +6,18 @@
       "remarkName": "壹贰叁肆伍陆柒捌玖",
       "createdAt": 1775038873975,
       "updatedAt": 1775039421580
+    },
+    "eslint.config.js": {
+      "folderUri": "eslint.config.js",
+      "remarkName": "es校验配置文件",
+      "createdAt": 1775040155490,
+      "updatedAt": 1775040155490
+    },
+    "resources": {
+      "folderUri": "resources",
+      "remarkName": "测试123",
+      "createdAt": 1775040349087,
+      "updatedAt": 1775040349087
     }
   }
 }

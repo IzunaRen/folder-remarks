@@ -593,9 +593,10 @@ function resourceKeyFromAnyUri(uri: vscode.Uri): string | undefined {
 type RemarkedTreeNode = {
   id: string;
   name: string;
+  uri: vscode.Uri;
   key: string;
+  isDir: boolean;
   remarkName?: string;
-  children: RemarkedTreeNode[];
 };
 
 class RemarkedTreeProvider implements vscode.TreeDataProvider<RemarkedTreeNode> {
@@ -613,85 +614,72 @@ class RemarkedTreeProvider implements vscode.TreeDataProvider<RemarkedTreeNode> 
   }
 
   getTreeItem(element: RemarkedTreeNode): vscode.TreeItem {
-    const uri = uriFromResourceKey(element.key);
     const item = new vscode.TreeItem(
       element.name,
-      element.children.length > 0 ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None
+      element.isDir ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None
     );
     item.description = element.remarkName ? formatRemarkDisplay(element.remarkName) : undefined;
-    item.tooltip = uri ? `${element.key}${element.remarkName ? `\n${formatRemarkDisplay(element.remarkName)}` : ""}` : element.key;
-    item.resourceUri = uri;
-    item.contextValue = "remarkedNode";
-    item.iconPath = element.children.length > 0 ? vscode.ThemeIcon.Folder : vscode.ThemeIcon.File;
-    if (uri) {
-      item.command = {
-        command: "traeFolderRemarks.openResource",
-        title: "",
-        arguments: [uri]
-      };
-    }
+    const ui = getUiStrings(resolveUiLanguage());
+    item.tooltip = `${element.key}${element.remarkName ? `\n${ui.decorationTooltipPrefix}${formatRemarkDisplay(element.remarkName)}` : ""}`;
+    item.resourceUri = element.uri;
+    item.contextValue = element.remarkName ? "remarkedNode" : "resourceNode";
+    item.iconPath = element.isDir ? vscode.ThemeIcon.Folder : vscode.ThemeIcon.File;
+    item.command = {
+      command: "traeFolderRemarks.openResource",
+      title: "",
+      arguments: [element.uri]
+    };
     return item;
   }
 
-  getChildren(element?: RemarkedTreeNode): RemarkedTreeNode[] | Thenable<RemarkedTreeNode[]> {
-    if (element) return element.children;
-    return buildRemarkedTreeRoots({ repo: this.#repo });
+  async getChildren(element?: RemarkedTreeNode): Promise<RemarkedTreeNode[]> {
+    const folders = vscode.workspace.workspaceFolders ?? [];
+    if (!element) {
+      return folders.map((f, idx) => ({
+        id: `root:${idx}`,
+        name: f.name,
+        uri: f.uri,
+        key: ".",
+        isDir: true,
+        remarkName: this.#repo.get(".")?.remarkName
+      }));
+    }
+
+    if (!element.isDir) return [];
+
+    let entries: [string, vscode.FileType][];
+    try {
+      entries = await vscode.workspace.fs.readDirectory(element.uri);
+    } catch {
+      return [];
+    }
+
+    const nodes: RemarkedTreeNode[] = [];
+    for (const [name, type] of entries) {
+      if (name === STORAGE_DIR_NAME) continue;
+      const uri = vscode.Uri.joinPath(element.uri, name);
+      const key = resourceKeyFromAnyUri(uri);
+      if (!key) continue;
+      if (key === STORAGE_DIR_NAME || key.startsWith(`${STORAGE_DIR_NAME}/`)) continue;
+      const isDir = (type & vscode.FileType.Directory) !== 0;
+      const remarkName = this.#repo.get(key)?.remarkName;
+      nodes.push({
+        id: uri.toString(),
+        name,
+        uri,
+        key,
+        isDir,
+        remarkName
+      });
+    }
+
+    nodes.sort((a, b) => {
+      if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    return nodes;
   }
-}
-
-function buildRemarkedTreeRoots(args: { repo: RemarksRepository }): RemarkedTreeNode[] {
-  const byId = new Map<string, RemarkedTreeNode>();
-  const roots: RemarkedTreeNode[] = [];
-
-  const getOrCreate = (id: string, name: string, key: string): RemarkedTreeNode => {
-    const existing = byId.get(id);
-    if (existing) return existing;
-    const node: RemarkedTreeNode = { id, name, key, children: [] };
-    byId.set(id, node);
-    return node;
-  };
-
-  const ensureChild = (parent: RemarkedTreeNode | undefined, seg: string, key: string): RemarkedTreeNode => {
-    const id = parent ? `${parent.id}/${seg}` : seg;
-    const node = getOrCreate(id, seg, key);
-    if (!parent) {
-      if (!roots.includes(node)) roots.push(node);
-      return node;
-    }
-    if (!parent.children.includes(node)) parent.children.push(node);
-    return node;
-  };
-
-  for (const r of args.repo.list()) {
-    const key = normalizeResourceKey(r.folderUri);
-    if (key === STORAGE_DIR_NAME || key.startsWith(`${STORAGE_DIR_NAME}/`)) continue;
-
-    if (key === ".") {
-      const rootName = vscode.workspace.workspaceFolders?.[0]?.name ?? ".";
-      const rootNode = getOrCreate(".", rootName, ".");
-      rootNode.remarkName = r.remarkName;
-      if (!roots.includes(rootNode)) roots.unshift(rootNode);
-      continue;
-    }
-
-    const segments = key.split("/").filter(Boolean);
-    let parent: RemarkedTreeNode | undefined;
-    for (let i = 0; i < segments.length; i += 1) {
-      const seg = segments[i];
-      const segKey = segments.slice(0, i + 1).join("/");
-      const node = ensureChild(parent, seg, segKey);
-      parent = node;
-      if (i === segments.length - 1) node.remarkName = r.remarkName;
-    }
-  }
-
-  const sort = (nodes: RemarkedTreeNode[]) => {
-    nodes.sort((a, b) => a.name.localeCompare(b.name));
-    for (const n of nodes) sort(n.children);
-  };
-  sort(roots);
-
-  return roots;
 }
 
 function resourceKeyFromArg(arg: unknown): string | undefined {

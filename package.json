@@ -2,7 +2,7 @@
   "name": "trae-folder-remarks",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "publisher": "folder-remarks",
   "icon": "resources/icon.png",
   "license": "MIT",
@@ -117,7 +117,7 @@
       "view/item/context": [
         {
           "command": "traeFolderRemarks.setRemark",
-          "when": "view == traeFolderRemarksRemarkedTree && viewItem == remarkedNode",
+          "when": "view == traeFolderRemarksRemarkedTree && (viewItem == resourceNode || viewItem == remarkedNode)",
           "group": "inline@5"
         },
         {
