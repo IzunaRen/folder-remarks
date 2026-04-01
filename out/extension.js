@@ -37,7 +37,6 @@ exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
 const remarksRepository_1 = require("./core/remarksRepository");
-const remarksViewProvider_1 = require("./ui/remarksViewProvider");
 const STORAGE_DIR_NAME = ".FolderRemarks";
 const STORAGE_FILE_NAME = "folder-remarks.json";
 const LEGACY_VSCODE_FILE_NAME = "trae-folder-remarks.json";
@@ -53,10 +52,8 @@ async function activate(context) {
     const storage = await createRemarksStorage({ output });
     const repository = new remarksRepository_1.RemarksRepository({ storage });
     await repository.load();
-    const viewProvider = new remarksViewProvider_1.RemarksViewProvider({ context, repo: repository });
-    context.subscriptions.push(vscode.window.registerWebviewViewProvider(remarksViewProvider_1.RemarksViewProvider.viewType, viewProvider, {
-        webviewOptions: { retainContextWhenHidden: true }
-    }));
+    const remarkedTreeProvider = new RemarkedTreeProvider(repository);
+    context.subscriptions.push(vscode.window.registerTreeDataProvider("traeFolderRemarksRemarkedTree", remarkedTreeProvider));
     const storageWatcher = createStorageWatcher(storage, repository);
     if (storageWatcher)
         context.subscriptions.push(storageWatcher);
@@ -498,15 +495,15 @@ class RemarksDecorationProvider {
             return undefined;
         const ui = getUiStrings(resolveUiLanguage());
         const badge = formatDecorationBadge(entry.remarkName);
-        const tooltip = `${ui.decorationTooltipPrefix}${formatRemarkDisplay(entry.remarkName)}`;
-        return { badge, tooltip, color: new vscode.ThemeColor("descriptionForeground") };
+        const tooltip = `${key}\n${ui.decorationTooltipPrefix}${formatRemarkDisplay(entry.remarkName)}`;
+        return { badge, tooltip };
     }
 }
 function formatDecorationBadge(remarkName) {
     const core = normalizeRemarkCore(remarkName) ?? DEFAULT_REMARK_CORE;
-    const max = 12;
-    const clipped = core.length > max ? `${core.slice(0, max - 1)}…` : core;
-    return `【${clipped}】`;
+    const chars = Array.from(core);
+    const clipped = chars.slice(0, 2).join("");
+    return clipped || "R";
 }
 function resourceKeyFromAnyUri(uri) {
     const rel = vscode.workspace.asRelativePath(uri, false);
@@ -519,6 +516,94 @@ function resourceKeyFromAnyUri(uri) {
             return normalizeResourceKey(rel2);
     }
     return undefined;
+}
+class RemarkedTreeProvider {
+    #repo;
+    #emitter = new vscode.EventEmitter();
+    onDidChangeTreeData = this.#emitter.event;
+    constructor(repo) {
+        this.#repo = repo;
+        this.#repo.onDidChange(() => this.refresh());
+    }
+    refresh() {
+        this.#emitter.fire(undefined);
+    }
+    getTreeItem(element) {
+        const uri = uriFromResourceKey(element.key);
+        const item = new vscode.TreeItem(element.name, element.children.length > 0 ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
+        item.description = element.remarkName ? formatRemarkDisplay(element.remarkName) : undefined;
+        item.tooltip = uri ? `${element.key}${element.remarkName ? `\n${formatRemarkDisplay(element.remarkName)}` : ""}` : element.key;
+        item.resourceUri = uri;
+        item.contextValue = "remarkedNode";
+        item.iconPath = element.children.length > 0 ? vscode.ThemeIcon.Folder : vscode.ThemeIcon.File;
+        if (uri) {
+            item.command = {
+                command: "traeFolderRemarks.openResource",
+                title: "",
+                arguments: [uri]
+            };
+        }
+        return item;
+    }
+    getChildren(element) {
+        if (element)
+            return element.children;
+        return buildRemarkedTreeRoots({ repo: this.#repo });
+    }
+}
+function buildRemarkedTreeRoots(args) {
+    const byId = new Map();
+    const roots = [];
+    const getOrCreate = (id, name, key) => {
+        const existing = byId.get(id);
+        if (existing)
+            return existing;
+        const node = { id, name, key, children: [] };
+        byId.set(id, node);
+        return node;
+    };
+    const ensureChild = (parent, seg, key) => {
+        const id = parent ? `${parent.id}/${seg}` : seg;
+        const node = getOrCreate(id, seg, key);
+        if (!parent) {
+            if (!roots.includes(node))
+                roots.push(node);
+            return node;
+        }
+        if (!parent.children.includes(node))
+            parent.children.push(node);
+        return node;
+    };
+    for (const r of args.repo.list()) {
+        const key = normalizeResourceKey(r.folderUri);
+        if (key === STORAGE_DIR_NAME || key.startsWith(`${STORAGE_DIR_NAME}/`))
+            continue;
+        if (key === ".") {
+            const rootName = vscode.workspace.workspaceFolders?.[0]?.name ?? ".";
+            const rootNode = getOrCreate(".", rootName, ".");
+            rootNode.remarkName = r.remarkName;
+            if (!roots.includes(rootNode))
+                roots.unshift(rootNode);
+            continue;
+        }
+        const segments = key.split("/").filter(Boolean);
+        let parent;
+        for (let i = 0; i < segments.length; i += 1) {
+            const seg = segments[i];
+            const segKey = segments.slice(0, i + 1).join("/");
+            const node = ensureChild(parent, seg, segKey);
+            parent = node;
+            if (i === segments.length - 1)
+                node.remarkName = r.remarkName;
+        }
+    }
+    const sort = (nodes) => {
+        nodes.sort((a, b) => a.name.localeCompare(b.name));
+        for (const n of nodes)
+            sort(n.children);
+    };
+    sort(roots);
+    return roots;
 }
 function resourceKeyFromArg(arg) {
     if (!arg)

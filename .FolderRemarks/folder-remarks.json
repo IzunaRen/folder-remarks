@@ -1,11 +1,11 @@
 {
   "version": 1,
   "remarksByFolderUri": {
-    "package.nls.zh-cn.json": {
-      "folderUri": "package.nls.zh-cn.json",
-      "remarkName": "施氏食狮史",
-      "createdAt": 1775038016349,
-      "updatedAt": 1775038016349
+    "package.json": {
+      "folderUri": "package.json",
+      "remarkName": "壹贰叁肆伍陆柒捌玖",
+      "createdAt": 1775038873975,
+      "updatedAt": 1775039421580
     }
   }
 }

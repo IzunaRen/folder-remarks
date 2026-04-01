@@ -2,7 +2,7 @@
   "name": "trae-folder-remarks",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.1.12",
+  "version": "0.1.19",
   "publisher": "folder-remarks",
   "icon": "resources/icon.png",
   "license": "MIT",
@@ -24,7 +24,7 @@
   "main": "./out/extension.js",
   "activationEvents": [
     "onStartupFinished",
-    "onView:traeFolderRemarksView",
+    "onView:traeFolderRemarksRemarkedTree",
     "onCommand:traeFolderRemarks.setRemark",
     "onCommand:traeFolderRemarks.addRemark",
     "onCommand:traeFolderRemarks.editRemark",
@@ -84,7 +84,7 @@
     "views": {
       "traeFolderRemarks": [
         {
-          "id": "traeFolderRemarksView",
+          "id": "traeFolderRemarksRemarkedTree",
           "name": "%view.folderRemarks.name%"
         }
       ]
@@ -94,24 +94,36 @@
         {
           "command": "traeFolderRemarks.setRemark",
           "when": "resourceScheme == 'file'",
-          "group": "navigation@5"
+          "group": "z_traeFolderRemarks@99"
         },
         {
           "command": "traeFolderRemarks.deleteRemark",
           "when": "resourceScheme == 'file'",
-          "group": "navigation@6"
+          "group": "z_traeFolderRemarks@100"
         }
       ],
       "editor/title/context": [
         {
           "command": "traeFolderRemarks.setRemark",
           "when": "resourceScheme == 'file'",
-          "group": "navigation@5"
+          "group": "z_traeFolderRemarks@99"
         },
         {
           "command": "traeFolderRemarks.deleteRemark",
           "when": "resourceScheme == 'file'",
-          "group": "navigation@6"
+          "group": "z_traeFolderRemarks@100"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "traeFolderRemarks.setRemark",
+          "when": "view == traeFolderRemarksRemarkedTree && viewItem == remarkedNode",
+          "group": "inline@5"
+        },
+        {
+          "command": "traeFolderRemarks.deleteRemark",
+          "when": "view == traeFolderRemarksRemarkedTree && viewItem == remarkedNode",
+          "group": "inline@6"
         }
       ],
       "commandPalette": [
