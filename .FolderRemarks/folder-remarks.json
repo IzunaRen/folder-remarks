@@ -18,6 +18,30 @@
       "remarkName": "测试123",
       "createdAt": 1775040349087,
       "updatedAt": 1775040349087
+    },
+    ".vscodeignore": {
+      "folderUri": ".vscodeignore",
+      "remarkName": "新的测试备注内容",
+      "createdAt": 1775100023176,
+      "updatedAt": 1775100023176
+    },
+    ".FolderRemarks": {
+      "folderUri": ".FolderRemarks",
+      "remarkName": "备注储存目录",
+      "createdAt": 1775100915192,
+      "updatedAt": 1775110236329
+    },
+    ".FolderRemarks/folder-remarks.json": {
+      "folderUri": ".FolderRemarks/folder-remarks.json",
+      "remarkName": "备注存储文件",
+      "createdAt": 1775100915233,
+      "updatedAt": 1775100915233
+    },
+    "out": {
+      "folderUri": "out",
+      "remarkName": "哈哈333",
+      "createdAt": 1775110249663,
+      "updatedAt": 1775110264301
     }
   }
 }

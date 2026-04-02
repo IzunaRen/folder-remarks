@@ -1,9 +1,9 @@
 {
-  "name": "trae-folder-remarks",
+  "name": "folder-remarks",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.1.26",
-  "publisher": "folder-remarks",
+  "version": "0.1.34",
+  "publisher": "Andrew-s",
   "icon": "resources/icon.png",
   "license": "MIT",
   "repository": {
@@ -24,60 +24,120 @@
   "main": "./out/extension.js",
   "activationEvents": [
     "onStartupFinished",
-    "onView:traeFolderRemarksRemarkedTree",
-    "onCommand:traeFolderRemarks.setRemark",
-    "onCommand:traeFolderRemarks.addRemark",
-    "onCommand:traeFolderRemarks.editRemark",
-    "onCommand:traeFolderRemarks.deleteRemark",
-    "onCommand:traeFolderRemarks.revealActiveFile",
-    "onCommand:traeFolderRemarks.openResource",
-    "onCommand:traeFolderRemarks.openFolder",
-    "onCommand:traeFolderRemarks.manageRemarks",
-    "onCommand:traeFolderRemarks.debugPing"
+    "onView:folderRemarksRemarkedTree",
+    "onCommand:folderRemarks.setRemark",
+    "onCommand:folderRemarks.addRemark",
+    "onCommand:folderRemarks.editRemark",
+    "onCommand:folderRemarks.deleteRemark",
+    "onCommand:folderRemarks.revealActiveFile",
+    "onCommand:folderRemarks.treeRefresh",
+    "onCommand:folderRemarks.treeOpenToSide",
+    "onCommand:folderRemarks.treeRevealInExplorer",
+    "onCommand:folderRemarks.treeRevealInOS",
+    "onCommand:folderRemarks.treeCopyRelativePath",
+    "onCommand:folderRemarks.treeCopyAbsolutePath",
+    "onCommand:folderRemarks.treeRename",
+    "onCommand:folderRemarks.treeDelete",
+    "onCommand:folderRemarks.treeNewFile",
+    "onCommand:folderRemarks.treeNewFolder",
+    "onCommand:folderRemarks.openResource",
+    "onCommand:folderRemarks.openFolder",
+    "onCommand:folderRemarks.manageRemarks",
+    "onCommand:folderRemarks.debugPing"
   ],
   "contributes": {
     "commands": [
       {
-        "command": "traeFolderRemarks.setRemark",
+        "command": "folderRemarks.setRemark",
         "title": "%command.setRemark.title%",
         "category": "%command.category%"
       },
       {
-        "command": "traeFolderRemarks.deleteRemark",
+        "command": "folderRemarks.deleteRemark",
         "title": "%command.deleteRemark.title%",
         "category": "%command.category%"
       },
       {
-        "command": "traeFolderRemarks.checkBadges",
+        "command": "folderRemarks.checkBadges",
         "title": "%command.checkBadges.title%",
         "category": "%command.category%"
       },
       {
-        "command": "traeFolderRemarks.openFolder",
+        "command": "folderRemarks.openFolder",
         "title": "%command.openFolder.title%",
         "category": "%command.category%"
       },
       {
-        "command": "traeFolderRemarks.openResource",
+        "command": "folderRemarks.openResource",
         "title": "%command.openResource.title%",
         "category": "%command.category%"
       },
       {
-        "command": "traeFolderRemarks.manageRemarks",
+        "command": "folderRemarks.manageRemarks",
         "title": "%command.manageRemarks.title%",
         "category": "%command.category%"
       },
       {
-        "command": "traeFolderRemarks.revealActiveFile",
+        "command": "folderRemarks.revealActiveFile",
         "title": "%command.revealActiveFile.title%",
         "category": "%command.category%",
-        "icon": {
-          "light": "resources/icon.svg",
-          "dark": "resources/icon.svg"
-        }
+        "icon": "$(target)"
       },
       {
-        "command": "traeFolderRemarks.debugPing",
+        "command": "folderRemarks.treeRefresh",
+        "title": "%command.treeRefresh.title%",
+        "category": "%command.category%",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "folderRemarks.treeOpenToSide",
+        "title": "%command.treeOpenToSide.title%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "folderRemarks.treeRevealInExplorer",
+        "title": "%command.treeRevealInExplorer.title%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "folderRemarks.treeRevealInOS",
+        "title": "%command.treeRevealInOS.title%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "folderRemarks.treeCopyRelativePath",
+        "title": "%command.treeCopyRelativePath.title%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "folderRemarks.treeCopyAbsolutePath",
+        "title": "%command.treeCopyAbsolutePath.title%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "folderRemarks.treeRename",
+        "title": "%command.treeRename.title%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "folderRemarks.treeDelete",
+        "title": "%command.treeDelete.title%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "folderRemarks.treeNewFile",
+        "title": "%command.treeNewFile.title%",
+        "category": "%command.category%",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "folderRemarks.treeNewFolder",
+        "title": "%command.treeNewFolder.title%",
+        "category": "%command.category%",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "folderRemarks.debugPing",
         "title": "%command.debugPing.title%",
         "category": "%command.category%"
       }
@@ -85,16 +145,16 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "traeFolderRemarks",
+          "id": "folderRemarks",
           "title": "%viewsContainer.title%",
           "icon": "resources/icon.svg"
         }
       ]
     },
     "views": {
-      "traeFolderRemarks": [
+      "folderRemarks": [
         {
-          "id": "traeFolderRemarksRemarkedTree",
+          "id": "folderRemarksRemarkedTree",
           "name": "%view.folderRemarks.name%"
         }
       ]
@@ -102,68 +162,136 @@
     "menus": {
       "explorer/context": [
         {
-          "command": "traeFolderRemarks.setRemark",
+          "command": "folderRemarks.setRemark",
           "when": "resourceScheme == 'file'",
-          "group": "z_traeFolderRemarks@99"
+          "group": "z_folderRemarks@99"
         },
         {
-          "command": "traeFolderRemarks.deleteRemark",
+          "command": "folderRemarks.deleteRemark",
           "when": "resourceScheme == 'file'",
-          "group": "z_traeFolderRemarks@100"
+          "group": "z_folderRemarks@100"
         }
       ],
       "editor/title/context": [
         {
-          "command": "traeFolderRemarks.setRemark",
+          "command": "folderRemarks.setRemark",
           "when": "resourceScheme == 'file'",
-          "group": "z_traeFolderRemarks@99"
+          "group": "z_folderRemarks@99"
         },
         {
-          "command": "traeFolderRemarks.deleteRemark",
+          "command": "folderRemarks.deleteRemark",
           "when": "resourceScheme == 'file'",
-          "group": "z_traeFolderRemarks@100"
+          "group": "z_folderRemarks@100"
         }
       ],
       "view/item/context": [
         {
-          "command": "traeFolderRemarks.setRemark",
-          "when": "view == traeFolderRemarksRemarkedTree && (viewItem == resourceNode || viewItem == remarkedNode)",
+          "command": "folderRemarks.setRemark",
+          "when": "view == folderRemarksRemarkedTree && (viewItem == resourceNodeFile || viewItem == resourceNodeDir || viewItem == remarkedNodeFile || viewItem == remarkedNodeDir)",
           "group": "inline@5"
         },
         {
-          "command": "traeFolderRemarks.deleteRemark",
-          "when": "view == traeFolderRemarksRemarkedTree && viewItem == remarkedNode",
+          "command": "folderRemarks.deleteRemark",
+          "when": "view == folderRemarksRemarkedTree && (viewItem == remarkedNodeFile || viewItem == remarkedNodeDir)",
           "group": "inline@6"
+        },
+        {
+          "command": "folderRemarks.openResource",
+          "when": "view == folderRemarksRemarkedTree && (viewItem == resourceNodeFile || viewItem == remarkedNodeFile)",
+          "group": "navigation@1"
+        },
+        {
+          "command": "folderRemarks.treeOpenToSide",
+          "when": "view == folderRemarksRemarkedTree && (viewItem == resourceNodeFile || viewItem == remarkedNodeFile)",
+          "group": "navigation@2"
+        },
+        {
+          "command": "folderRemarks.treeRevealInExplorer",
+          "when": "view == folderRemarksRemarkedTree && (viewItem == resourceNodeFile || viewItem == resourceNodeDir || viewItem == remarkedNodeFile || viewItem == remarkedNodeDir)",
+          "group": "navigation@3"
+        },
+        {
+          "command": "folderRemarks.treeRevealInOS",
+          "when": "view == folderRemarksRemarkedTree && (viewItem == resourceNodeFile || viewItem == resourceNodeDir || viewItem == remarkedNodeFile || viewItem == remarkedNodeDir)",
+          "group": "navigation@4"
+        },
+        {
+          "command": "folderRemarks.treeCopyRelativePath",
+          "when": "view == folderRemarksRemarkedTree && (viewItem == resourceNodeFile || viewItem == resourceNodeDir || viewItem == remarkedNodeFile || viewItem == remarkedNodeDir)",
+          "group": "3_copy@1"
+        },
+        {
+          "command": "folderRemarks.treeCopyAbsolutePath",
+          "when": "view == folderRemarksRemarkedTree && (viewItem == resourceNodeFile || viewItem == resourceNodeDir || viewItem == remarkedNodeFile || viewItem == remarkedNodeDir)",
+          "group": "3_copy@2"
+        },
+        {
+          "command": "folderRemarks.treeRename",
+          "when": "view == folderRemarksRemarkedTree && (viewItem == resourceNodeFile || viewItem == resourceNodeDir || viewItem == remarkedNodeFile || viewItem == remarkedNodeDir)",
+          "group": "4_edit@1"
+        },
+        {
+          "command": "folderRemarks.treeDelete",
+          "when": "view == folderRemarksRemarkedTree && (viewItem == resourceNodeFile || viewItem == resourceNodeDir || viewItem == remarkedNodeFile || viewItem == remarkedNodeDir)",
+          "group": "4_edit@2"
+        },
+        {
+          "command": "folderRemarks.treeNewFile",
+          "when": "view == folderRemarksRemarkedTree && (viewItem == resourceNodeDir || viewItem == remarkedNodeDir)",
+          "group": "5_new@1"
+        },
+        {
+          "command": "folderRemarks.treeNewFolder",
+          "when": "view == folderRemarksRemarkedTree && (viewItem == resourceNodeDir || viewItem == remarkedNodeDir)",
+          "group": "5_new@2"
         }
       ],
       "view/title": [
         {
-          "command": "traeFolderRemarks.revealActiveFile",
-          "when": "view == traeFolderRemarksRemarkedTree",
+          "command": "folderRemarks.revealActiveFile",
+          "when": "view == folderRemarksRemarkedTree",
           "group": "navigation@1"
+        },
+        {
+          "command": "folderRemarks.treeRefresh",
+          "when": "view == folderRemarksRemarkedTree",
+          "group": "navigation@2"
+        },
+        {
+          "command": "folderRemarks.treeNewFile",
+          "when": "view == folderRemarksRemarkedTree",
+          "group": "navigation@3"
+        },
+        {
+          "command": "folderRemarks.treeNewFolder",
+          "when": "view == folderRemarksRemarkedTree",
+          "group": "navigation@4"
         }
       ],
       "commandPalette": [
         {
-          "command": "traeFolderRemarks.setRemark"
+          "command": "folderRemarks.setRemark"
         },
         {
-          "command": "traeFolderRemarks.manageRemarks"
+          "command": "folderRemarks.manageRemarks"
         },
         {
-          "command": "traeFolderRemarks.checkBadges"
+          "command": "folderRemarks.checkBadges"
         },
         {
-          "command": "traeFolderRemarks.revealActiveFile"
+          "command": "folderRemarks.revealActiveFile"
         },
         {
-          "command": "traeFolderRemarks.debugPing"
+          "command": "folderRemarks.treeRefresh"
+        },
+        {
+          "command": "folderRemarks.debugPing"
         }
       ]
     },
     "keybindings": [
       {
-        "command": "traeFolderRemarks.setRemark",
+        "command": "folderRemarks.setRemark",
         "key": "alt+e",
         "when": "explorerViewletVisible || filesExplorerFocus || editorTextFocus"
       }
@@ -171,7 +299,7 @@
     "configuration": {
       "title": "%configuration.title%",
       "properties": {
-        "traeFolderRemarks.language": {
+        "folderRemarks.language": {
           "type": "string",
           "default": "auto",
           "enum": [
@@ -186,7 +314,7 @@
           ],
           "description": "%configuration.language.description%"
         },
-        "traeFolderRemarks.displayPathStyle": {
+        "folderRemarks.displayPathStyle": {
           "type": "string",
           "default": "relative",
           "enum": [
@@ -199,7 +327,7 @@
           ],
           "description": "%configuration.displayPathStyle.description%"
         },
-        "traeFolderRemarks.autoRevealActiveFile": {
+        "folderRemarks.autoRevealActiveFile": {
           "type": "boolean",
           "default": true,
           "description": "%configuration.autoRevealActiveFile.description%"

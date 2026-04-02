@@ -59,6 +59,68 @@ class RemarksRepository {
         this.#state = nextState;
         this.#events.emit("change");
     }
+    async renameKey(args) {
+        if (args.fromKey === args.toKey)
+            return;
+        const existing = this.#state.remarksByFolderUri[args.fromKey];
+        if (!existing)
+            return;
+        const now = args.now ?? Date.now();
+        const nextMap = { ...this.#state.remarksByFolderUri };
+        delete nextMap[args.fromKey];
+        nextMap[args.toKey] = {
+            ...existing,
+            folderUri: args.toKey,
+            updatedAt: now
+        };
+        const nextState = { version: 1, remarksByFolderUri: nextMap };
+        await this.#storage.write(nextState);
+        this.#state = nextState;
+        this.#events.emit("change");
+    }
+    async movePrefix(args) {
+        if (args.fromPrefix === args.toPrefix)
+            return;
+        const now = args.now ?? Date.now();
+        const from = args.fromPrefix;
+        const to = args.toPrefix;
+        const fromWithSlash = `${from}/`;
+        const nextMap = { ...this.#state.remarksByFolderUri };
+        let changed = false;
+        for (const [key, value] of Object.entries(this.#state.remarksByFolderUri)) {
+            if (key !== from && !key.startsWith(fromWithSlash))
+                continue;
+            const suffix = key === from ? "" : key.slice(from.length);
+            const nextKey = `${to}${suffix}`;
+            delete nextMap[key];
+            nextMap[nextKey] = { ...value, folderUri: nextKey, updatedAt: now };
+            changed = true;
+        }
+        if (!changed)
+            return;
+        const nextState = { version: 1, remarksByFolderUri: nextMap };
+        await this.#storage.write(nextState);
+        this.#state = nextState;
+        this.#events.emit("change");
+    }
+    async removePrefix(prefix) {
+        const from = prefix;
+        const fromWithSlash = `${from}/`;
+        const nextMap = { ...this.#state.remarksByFolderUri };
+        let changed = false;
+        for (const key of Object.keys(this.#state.remarksByFolderUri)) {
+            if (key !== from && !key.startsWith(fromWithSlash))
+                continue;
+            delete nextMap[key];
+            changed = true;
+        }
+        if (!changed)
+            return;
+        const nextState = { version: 1, remarksByFolderUri: nextMap };
+        await this.#storage.write(nextState);
+        this.#state = nextState;
+        this.#events.emit("change");
+    }
 }
 exports.RemarksRepository = RemarksRepository;
 function parseRemarksStateV1(raw) {

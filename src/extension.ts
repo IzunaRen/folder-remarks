@@ -1,9 +1,10 @@
 import * as vscode from "vscode";
+import * as path from "path";
 import { RemarksRepository, type RemarksStorageLike } from "./core/remarksRepository";
 
 const STORAGE_DIR_NAME = ".FolderRemarks";
 const STORAGE_FILE_NAME = "folder-remarks.json";
-const LEGACY_VSCODE_FILE_NAME = "trae-folder-remarks.json";
+const LEGACY_VSCODE_FILE_NAME = "folder-remarks.json";
 const DEFAULT_REMARK_CORE = "无";
 
 export type ExtensionApi = {
@@ -24,9 +25,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   const storage = await createRemarksStorage({ output });
   const repository = new RemarksRepository({ storage });
   await repository.load();
+  await ensureStorageDefaultRemarks(repository);
 
   const remarkedTreeProvider = new RemarkedTreeProvider(repository);
-  const remarkedTreeView = vscode.window.createTreeView("traeFolderRemarksRemarkedTree", {
+  const remarkedTreeView = vscode.window.createTreeView("folderRemarksRemarkedTree", {
     treeDataProvider: remarkedTreeProvider,
     showCollapseAll: true
   });
@@ -39,7 +41,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   context.subscriptions.push(vscode.window.registerFileDecorationProvider(decorationProvider));
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e: vscode.ConfigurationChangeEvent) => {
-      if (e.affectsConfiguration("traeFolderRemarks.language")) decorationProvider.refresh();
+      if (e.affectsConfiguration("folderRemarks.language")) decorationProvider.refresh();
     })
   );
 
@@ -48,10 +50,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
     const editor = vscode.window.activeTextEditor;
     const uri = editor?.document.uri;
     if (!uri) return;
-    if (isStorageUri(uri)) return;
     const key = resourceKeyFromAnyUri(uri);
     if (!key) return;
-    if (key === STORAGE_DIR_NAME || key.startsWith(`${STORAGE_DIR_NAME}/`)) return;
     if (!remarkedTreeView.visible && !focus) return;
     if (!focus && uri.toString() === lastRevealedActiveEditorUri) return;
     lastRevealedActiveEditorUri = uri.toString();
@@ -82,7 +82,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   };
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("traeFolderRemarks.revealActiveFile", async () => {
+    vscode.commands.registerCommand("folderRemarks.revealActiveFile", async () => {
       await revealActiveEditorInRemarkTree(true);
     })
   );
@@ -90,7 +90,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   let autoRevealTimer: ReturnType<typeof setTimeout> | undefined;
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor(() => {
-      const enabled = vscode.workspace.getConfiguration("traeFolderRemarks").get<boolean>("autoRevealActiveFile", true);
+      const enabled = vscode.workspace.getConfiguration("folderRemarks").get<boolean>("autoRevealActiveFile", true);
       if (!enabled) return;
       if (autoRevealTimer) clearTimeout(autoRevealTimer);
       autoRevealTimer = setTimeout(() => {
@@ -100,7 +100,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("traeFolderRemarks.checkBadges", async () => {
+    vscode.commands.registerCommand("folderRemarks.checkBadges", async () => {
       const explorerCfg = vscode.workspace.getConfiguration("explorer");
       const badges = explorerCfg.get<boolean>("decorations.badges", true);
       const colors = explorerCfg.get<boolean>("decorations.colors", true);
@@ -118,8 +118,262 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("folderRemarks.treeRefresh", () => {
+      remarkedTreeProvider.refresh();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("folderRemarks.treeOpenToSide", async (resourceArg?: unknown) => {
+      const uri = uriFromArg(resourceArg);
+      if (!uri) return;
+      try {
+        const doc = await vscode.workspace.openTextDocument(uri);
+        await vscode.window.showTextDocument(doc, { preview: true, viewColumn: vscode.ViewColumn.Beside });
+      } catch {
+        await vscode.commands.executeCommand("revealInExplorer", uri);
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("folderRemarks.treeRevealInExplorer", async (resourceArg?: unknown) => {
+      const uri = uriFromArg(resourceArg);
+      if (!uri) return;
+      await vscode.commands.executeCommand("revealInExplorer", uri);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("folderRemarks.treeRevealInOS", async (resourceArg?: unknown) => {
+      const uri = uriFromArg(resourceArg);
+      if (!uri) return;
+      await vscode.commands.executeCommand("revealFileInOS", uri);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("folderRemarks.treeCopyRelativePath", async (resourceArg?: unknown) => {
+      const uri = uriFromArg(resourceArg);
+      if (!uri) return;
+      const rel = vscode.workspace.asRelativePath(uri, false);
+      await vscode.env.clipboard.writeText(rel && !rel.startsWith("..") ? rel : uri.fsPath);
+      vscode.window.setStatusBarMessage(getUiStrings(resolveUiLanguage()).copied, 1200);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("folderRemarks.treeCopyAbsolutePath", async (resourceArg?: unknown) => {
+      const uri = uriFromArg(resourceArg);
+      if (!uri) return;
+      await vscode.env.clipboard.writeText(uri.fsPath);
+      vscode.window.setStatusBarMessage(getUiStrings(resolveUiLanguage()).copied, 1200);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("folderRemarks.treeRename", async (resourceArg?: unknown) => {
+      const ui = getUiStrings(resolveUiLanguage());
+      const uri = uriFromArg(resourceArg);
+      if (!uri) return;
+
+      const key = resourceKeyFromAnyUri(uri);
+      if (!key || key === ".") return;
+
+      try {
+        await vscode.workspace.fs.stat(uri);
+      } catch {
+        return;
+      }
+
+      const currentName = path.basename(uri.fsPath);
+      const nextName = await vscode.window.showInputBox({
+        title: ui.renameTitle,
+        value: currentName,
+        prompt: ui.renamePrompt,
+        ignoreFocusOut: true,
+        validateInput: (v) => {
+          const name = v.trim();
+          if (!name) return ui.renameInvalid;
+          if (name === "." || name === "..") return ui.renameInvalid;
+          if (/[\\/]/u.test(name)) return ui.renameInvalid;
+          return undefined;
+        }
+      });
+      if (typeof nextName !== "string") return;
+      const normalizedName = nextName.trim();
+      if (!normalizedName) return;
+      if (normalizedName === currentName) return;
+
+      const parentDir = path.dirname(uri.fsPath);
+      const nextUri = vscode.Uri.file(path.join(parentDir, normalizedName));
+      const nextKey = resourceKeyFromAnyUri(nextUri);
+      if (!nextKey) return;
+      try {
+        await vscode.workspace.fs.stat(nextUri);
+        void vscode.window.showErrorMessage(ui.renameExists);
+        return;
+      } catch {
+        // ignore
+      }
+
+      const edit = new vscode.WorkspaceEdit();
+      edit.renameFile(uri, nextUri, { overwrite: false, ignoreIfExists: false });
+      const ok = await vscode.workspace.applyEdit(edit);
+      if (!ok) {
+        void vscode.window.showErrorMessage(ui.renameFailed);
+        return;
+      }
+      void revealActiveEditorInRemarkTree(false);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("folderRemarks.treeDelete", async (resourceArg?: unknown) => {
+      const ui = getUiStrings(resolveUiLanguage());
+      const uri = uriFromArg(resourceArg);
+      if (!uri) return;
+
+      const key = resourceKeyFromAnyUri(uri);
+      if (!key || key === ".") return;
+
+      let stat: vscode.FileStat | undefined;
+      try {
+        stat = await vscode.workspace.fs.stat(uri);
+      } catch {
+        stat = undefined;
+      }
+      const isDir = Boolean(stat && (stat.type & vscode.FileType.Directory) !== 0);
+
+      const ok = await vscode.window.showWarningMessage(
+        isDir ? ui.deleteConfirmFolder(path.basename(uri.fsPath)) : ui.deleteConfirmResource(path.basename(uri.fsPath)),
+        { modal: true },
+        ui.deleteAction
+      );
+      if (ok !== ui.deleteAction) return;
+
+      await vscode.workspace.fs.delete(uri, { recursive: true, useTrash: true });
+      if (isDir) {
+        await repository.removePrefix(key);
+      } else {
+        await repository.remove(key);
+      }
+      remarkedTreeProvider.refresh();
+    })
+  );
+
+  const promptNewName = async (args: { title: string; prompt: string }): Promise<string | undefined> => {
+    const ui = getUiStrings(resolveUiLanguage());
+    const name = await vscode.window.showInputBox({
+      title: args.title,
+      prompt: args.prompt,
+      ignoreFocusOut: true,
+      validateInput: (v) => {
+        const n = v.trim();
+        if (!n) return ui.newNameInvalid;
+        if (n === "." || n === "..") return ui.newNameInvalid;
+        if (/[\\/]/u.test(n)) return ui.newNameInvalid;
+        return undefined;
+      }
+    });
+    if (typeof name !== "string") return undefined;
+    const trimmed = name.trim();
+    if (!trimmed) return undefined;
+    return trimmed;
+  };
+
+  const getBaseDirForCreate = async (resourceArg?: unknown): Promise<vscode.Uri | undefined> => {
+    const uri =
+      uriFromArg(resourceArg) ??
+      remarkedTreeView.selection[0]?.uri ??
+      vscode.workspace.workspaceFolders?.[0]?.uri;
+    if (!uri) return undefined;
+    try {
+      const stat = await vscode.workspace.fs.stat(uri);
+      const isDir = (stat.type & vscode.FileType.Directory) !== 0;
+      if (isDir) return uri;
+    } catch {
+      // ignore
+    }
+    return vscode.Uri.file(path.dirname(uri.fsPath));
+  };
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("folderRemarks.treeNewFile", async (resourceArg?: unknown) => {
+      const ui = getUiStrings(resolveUiLanguage());
+      const baseDir = await getBaseDirForCreate(resourceArg);
+      if (!baseDir) return;
+      const name = await promptNewName({ title: ui.newFileTitle, prompt: ui.newFilePrompt });
+      if (!name) return;
+      const fileUri = vscode.Uri.file(path.join(baseDir.fsPath, name));
+      await vscode.workspace.fs.writeFile(fileUri, new Uint8Array());
+      remarkedTreeProvider.refresh();
+      await openResource(fileUri);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("folderRemarks.treeNewFolder", async (resourceArg?: unknown) => {
+      const ui = getUiStrings(resolveUiLanguage());
+      const baseDir = await getBaseDirForCreate(resourceArg);
+      if (!baseDir) return;
+      const name = await promptNewName({ title: ui.newFolderTitle, prompt: ui.newFolderPrompt });
+      if (!name) return;
+      const dirUri = vscode.Uri.file(path.join(baseDir.fsPath, name));
+      await vscode.workspace.fs.createDirectory(dirUri);
+      remarkedTreeProvider.refresh();
+    })
+  );
+
+  const handleDidRenameFiles = async (e: vscode.FileRenameEvent): Promise<void> => {
+    for (const f of e.files) {
+      const oldKey = resourceKeyFromAnyUri(f.oldUri);
+      const newKey = resourceKeyFromAnyUri(f.newUri);
+      if (!oldKey || !newKey) continue;
+      if (oldKey === "." || newKey === ".") continue;
+
+      let isDir = false;
+      try {
+        const stat = await vscode.workspace.fs.stat(f.newUri);
+        isDir = (stat.type & vscode.FileType.Directory) !== 0;
+      } catch {
+        isDir = false;
+      }
+
+      if (isDir) {
+        await repository.movePrefix({ fromPrefix: oldKey, toPrefix: newKey });
+      } else {
+        await repository.renameKey({ fromKey: oldKey, toKey: newKey });
+      }
+    }
+    remarkedTreeProvider.refresh();
+  };
+
+  const handleDidDeleteFiles = async (e: vscode.FileDeleteEvent): Promise<void> => {
+    for (const uri of e.files) {
+      const key = resourceKeyFromAnyUri(uri);
+      if (!key) continue;
+      if (key === ".") continue;
+      await repository.removePrefix(key);
+    }
+    remarkedTreeProvider.refresh();
+  };
+
+  context.subscriptions.push(
+    vscode.workspace.onDidRenameFiles((e) => {
+      void handleDidRenameFiles(e);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidDeleteFiles((e) => {
+      void handleDidDeleteFiles(e);
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand(
-      "traeFolderRemarks.setRemark",
+      "folderRemarks.setRemark",
       async (resourceArg?: unknown, remarkName?: string) => {
         output.appendLine(`[setRemark] invoked, argType=${typeof resourceArg}`);
         const targetUri =
@@ -129,55 +383,37 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
 
         if (resourceArg && typeof remarkName !== "string") {
           setTimeout(() => {
-            void vscode.commands.executeCommand("traeFolderRemarks._setRemarkDeferred", targetUri);
+            void setRemarkCore({ repository, output, targetUri });
           }, 0);
           return;
         }
 
-        await setRemarkCore({
-          repository,
-          output,
-          targetUri,
-          remarkName
-        });
+        await setRemarkCore({ repository, output, targetUri, remarkName });
       }
     )
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("traeFolderRemarks._setRemarkDeferred", async (resourceUri?: vscode.Uri) => {
-      if (!resourceUri) return;
-      try {
-        await vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup");
-      } catch {
-        // ignore
-      }
-      await new Promise<void>((resolve) => setTimeout(resolve, 200));
-      await setRemarkCore({ repository, output, targetUri: resourceUri });
-    })
-  );
-
-  context.subscriptions.push(
-    vscode.commands.registerCommand("traeFolderRemarks.addRemark", async (resourceArg?: unknown, remarkName?: string) =>
-      vscode.commands.executeCommand("traeFolderRemarks.setRemark", resourceArg, remarkName)
+    vscode.commands.registerCommand("folderRemarks.addRemark", async (resourceArg?: unknown, remarkName?: string) =>
+      vscode.commands.executeCommand("folderRemarks.setRemark", resourceArg, remarkName)
     )
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand(
-      "traeFolderRemarks.editRemark",
+      "folderRemarks.editRemark",
       async (resourceArg?: unknown, remarkName?: string) => {
         const key = resourceKeyFromArg(resourceArg) ?? (await pickRemarkKey(repository));
         if (!key) return;
         const uri = uriFromResourceKey(key);
         if (!uri) return;
-        await vscode.commands.executeCommand("traeFolderRemarks.setRemark", uri, remarkName);
+        await vscode.commands.executeCommand("folderRemarks.setRemark", uri, remarkName);
       }
     )
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("traeFolderRemarks.deleteRemark", async (resourceArg?: unknown, force?: boolean) => {
+    vscode.commands.registerCommand("folderRemarks.deleteRemark", async (resourceArg?: unknown, force?: boolean) => {
       try {
         const ui = getUiStrings(resolveUiLanguage());
         const key = resourceKeyFromArg(resourceArg) ?? (await pickRemarkKey(repository));
@@ -203,7 +439,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("traeFolderRemarks.openResource", async (resourceArg?: unknown) => {
+    vscode.commands.registerCommand("folderRemarks.openResource", async (resourceArg?: unknown) => {
       try {
         const uri = uriFromArg(resourceArg) ?? uriFromResourceKey(await pickRemarkKey(repository));
         if (!uri) return;
@@ -218,13 +454,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("traeFolderRemarks.openFolder", async (resourceUri?: vscode.Uri) => {
-      await vscode.commands.executeCommand("traeFolderRemarks.openResource", resourceUri);
+    vscode.commands.registerCommand("folderRemarks.openFolder", async (resourceUri?: vscode.Uri) => {
+      await vscode.commands.executeCommand("folderRemarks.openResource", resourceUri);
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("traeFolderRemarks.manageRemarks", () => {
+    vscode.commands.registerCommand("folderRemarks.manageRemarks", () => {
       const ui = getUiStrings(resolveUiLanguage());
       const pick = vscode.window.createQuickPick<RemarkQuickPickItem>();
       pick.matchOnDescription = true;
@@ -252,17 +488,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
       pick.onDidAccept(async () => {
         const selected = pick.selectedItems[0];
         if (!selected) return;
-        await vscode.commands.executeCommand("traeFolderRemarks.openResource", selected.resourceKey);
+        await vscode.commands.executeCommand("folderRemarks.openResource", selected.resourceKey);
         pick.hide();
       });
 
       pick.onDidTriggerItemButton(async (e: vscode.QuickPickItemButtonEvent<RemarkQuickPickItem>) => {
         if (e.button.tooltip === ui.setActionTooltip) {
-          await vscode.commands.executeCommand("traeFolderRemarks.setRemark", e.item.resourceKey);
+          await vscode.commands.executeCommand("folderRemarks.setRemark", e.item.resourceKey);
           return;
         }
         if (e.button.tooltip === ui.deleteActionTooltip) {
-          await vscode.commands.executeCommand("traeFolderRemarks.deleteRemark", e.item.resourceKey);
+          await vscode.commands.executeCommand("folderRemarks.deleteRemark", e.item.resourceKey);
         }
       });
 
@@ -271,7 +507,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("traeFolderRemarks.debugPing", () => {
+    vscode.commands.registerCommand("folderRemarks.debugPing", () => {
       output.show(true);
       output.appendLine(`[debugPing] at: ${new Date().toISOString()}`);
       void vscode.window.showInformationMessage("Workspace Remarks: debug ping");
@@ -283,10 +519,54 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
 
 export function deactivate(): void {}
 
+async function ensureStorageDefaultRemarks(repo: RemarksRepository): Promise<void> {
+  const root = vscode.workspace.workspaceFolders?.[0]?.uri;
+  if (!root) return;
+
+  const lang = resolveUiLanguage();
+  const defaults =
+    lang === "zh-cn"
+      ? {
+          dir: "备注存储目录",
+          file: "备注存储文件",
+          legacyFile: "旧版备注文件"
+        }
+      : {
+          dir: "Remarks Storage Folder",
+          file: "Remarks Storage File",
+          legacyFile: "Legacy Remarks File"
+        };
+
+  const dirKey = STORAGE_DIR_NAME;
+  const fileKey = `${STORAGE_DIR_NAME}/${STORAGE_FILE_NAME}`;
+  const legacyKey = `.vscode/${LEGACY_VSCODE_FILE_NAME}`;
+
+  try {
+    if (!repo.get(dirKey)) {
+      await repo.upsert({ folderUri: dirKey, remarkName: defaults.dir });
+    }
+    if (!repo.get(fileKey)) {
+      await repo.upsert({ folderUri: fileKey, remarkName: defaults.file });
+    }
+
+    const legacyFileUri = vscode.Uri.joinPath(root, ".vscode", LEGACY_VSCODE_FILE_NAME);
+    try {
+      await vscode.workspace.fs.stat(legacyFileUri);
+      if (!repo.get(legacyKey)) {
+        await repo.upsert({ folderUri: legacyKey, remarkName: defaults.legacyFile });
+      }
+    } catch {
+      // ignore
+    }
+  } catch {
+    // ignore
+  }
+}
+
 function guessActiveResourceUri(): vscode.Uri | undefined {
   const ed = vscode.window.activeTextEditor;
   const uri = ed?.document?.uri;
-  if (uri && uri.scheme === "file" && isUriInWorkspace(uri) && !isStorageUri(uri)) return uri;
+  if (uri && uri.scheme === "file" && isUriInWorkspace(uri)) return uri;
   return undefined;
 }
 
@@ -299,7 +579,6 @@ async function resolveResourceUri(): Promise<vscode.Uri | undefined> {
     openLabel: ui.selectResourceLabel
   });
   const uri = pick?.[0];
-  if (uri && isStorageUri(uri)) return undefined;
   return uri;
 }
 
@@ -493,11 +772,6 @@ function normalizeRemarkCore(input: string): string | undefined {
   return core || undefined;
 }
 
-function isStorageUri(uri: vscode.Uri): boolean {
-  if (!uri || uri.scheme !== "file") return false;
-  return uri.path.includes(`/${STORAGE_DIR_NAME}/`) || uri.path.endsWith(`/${STORAGE_DIR_NAME}`);
-}
-
 type UiLang = "en" | "zh-cn";
 
 type UiStrings = {
@@ -506,11 +780,24 @@ type UiStrings = {
   setRemarkFailedPrefix: string;
   saved: string;
   cleared: string;
+  copied: string;
   tooLong: string;
   editorGiving: string;
   editorPlaceholderPrefix: string;
   editorPlaceholderSuffix: string;
   editorHint: string;
+  renameTitle: string;
+  renamePrompt: string;
+  renameInvalid: string;
+  renameExists: string;
+  renameFailed: string;
+  deleteConfirmResource: (name: string) => string;
+  deleteConfirmFolder: (name: string) => string;
+  newNameInvalid: string;
+  newFileTitle: string;
+  newFilePrompt: string;
+  newFolderTitle: string;
+  newFolderPrompt: string;
   deleteConfirm: (remarkName: string) => string;
   deleteAction: string;
   deleteFailedPrefix: string;
@@ -524,7 +811,7 @@ type UiStrings = {
 
 function resolveUiLanguage(): UiLang {
   const cfg = vscode.workspace.getConfiguration();
-  const raw = cfg.get<string>("traeFolderRemarks.language", "auto");
+  const raw = cfg.get<string>("folderRemarks.language", "auto");
   if (raw === "en" || raw === "zh-cn") return raw;
   const envLang = vscode.env.language.toLowerCase();
   return envLang.startsWith("zh") ? "zh-cn" : "en";
@@ -538,11 +825,24 @@ function getUiStrings(lang: UiLang): UiStrings {
       setRemarkFailedPrefix: "设置备注失败：",
       saved: "备注已保存",
       cleared: "备注已清除",
+      copied: "已复制到剪贴板",
       tooLong: "备注内容过长（最多 500 字符）。",
       editorGiving: "给",
       editorPlaceholderPrefix: "输入备注…",
       editorPlaceholderSuffix: "",
       editorHint: "请输入：（按 \"Enter\" 以确认或按 \"Esc\" 以取消）",
+      renameTitle: "重命名",
+      renamePrompt: "输入新名称",
+      renameInvalid: "名称无效",
+      renameExists: "已存在同名文件或文件夹。",
+      renameFailed: "重命名失败。",
+      deleteConfirmResource: (name) => `删除 "${name}"？`,
+      deleteConfirmFolder: (name) => `删除文件夹 "${name}"？（将递归删除）`,
+      newNameInvalid: "名称无效",
+      newFileTitle: "新建文件",
+      newFilePrompt: "输入文件名（可包含扩展名）",
+      newFolderTitle: "新建文件夹",
+      newFolderPrompt: "输入文件夹名",
       deleteConfirm: (remarkName) => `删除备注 "${remarkName}"？`,
       deleteAction: "删除",
       deleteFailedPrefix: "删除备注失败：",
@@ -560,11 +860,24 @@ function getUiStrings(lang: UiLang): UiStrings {
     setRemarkFailedPrefix: "Set remark failed: ",
     saved: "Remark saved",
     cleared: "Remark cleared",
+    copied: "Copied",
     tooLong: "Remark is too long (max 500 characters).",
     editorGiving: "To",
     editorPlaceholderPrefix: "Enter remark...",
     editorPlaceholderSuffix: "",
     editorHint: 'Type to input: (Press "Enter" to confirm or "Esc" to cancel)',
+    renameTitle: "Rename",
+    renamePrompt: "Enter new name",
+    renameInvalid: "Invalid name",
+    renameExists: "A file or folder with the same name already exists.",
+    renameFailed: "Rename failed.",
+    deleteConfirmResource: (name) => `Delete "${name}"?`,
+    deleteConfirmFolder: (name) => `Delete folder "${name}"? (Recursive)`,
+    newNameInvalid: "Invalid name",
+    newFileTitle: "New File",
+    newFilePrompt: "Enter file name",
+    newFolderTitle: "New Folder",
+    newFolderPrompt: "Enter folder name",
     deleteConfirm: (remarkName) => `Delete remark "${remarkName}"?`,
     deleteAction: "Delete",
     deleteFailedPrefix: "Delete remark failed: ",
@@ -583,20 +896,6 @@ async function promptRemarkName(args: {
   placeholder: string;
   prompt: string;
 }): Promise<string | undefined> {
-  await new Promise<void>((resolve) => setTimeout(resolve, 150));
-
-  const start = Date.now();
-  const picked = await vscode.window.showInputBox({
-    title: args.title,
-    value: args.value,
-    prompt: args.prompt,
-    placeHolder: args.placeholder,
-    ignoreFocusOut: true,
-    validateInput: (v) => (v.length > 500 ? getUiStrings(resolveUiLanguage()).tooLong : undefined)
-  });
-  if (typeof picked === "string") return picked;
-  if (Date.now() - start > 250) return picked;
-
   return new Promise<string | undefined>((resolve) => {
     const input = vscode.window.createInputBox();
     input.title = args.title;
@@ -626,7 +925,7 @@ async function promptRemarkName(args: {
       })
     );
 
-    input.show();
+    setTimeout(() => input.show(), 0);
   });
 }
 
@@ -643,7 +942,6 @@ async function setRemarkCore(args: {
       void vscode.window.showErrorMessage(ui.notInWorkspace);
       return;
     }
-    if (resourceKey === STORAGE_DIR_NAME || resourceKey.startsWith(`${STORAGE_DIR_NAME}/`)) return;
 
     const existing = args.repository.get(resourceKey);
     const input =
@@ -695,13 +993,8 @@ class RemarksDecorationProvider implements vscode.FileDecorationProvider {
   }
 
   provideFileDecoration(uri: vscode.Uri): vscode.ProviderResult<vscode.FileDecoration> {
-    if (uri.path.includes(`/${STORAGE_DIR_NAME}/`) || uri.path.endsWith(`/${STORAGE_DIR_NAME}`)) {
-      return undefined;
-    }
-
     const key = resourceKeyFromAnyUri(uri);
     if (!key) return undefined;
-    if (key === STORAGE_DIR_NAME || key.startsWith(`${STORAGE_DIR_NAME}/`)) return undefined;
     const entry = this.#repo.get(key);
     if (!entry?.remarkName) return undefined;
     const ui = getUiStrings(resolveUiLanguage());
@@ -761,11 +1054,12 @@ class RemarkedTreeProvider implements vscode.TreeDataProvider<RemarkedTreeNode> 
     const ui = getUiStrings(resolveUiLanguage());
     item.tooltip = `${element.key}${element.remarkName ? `\n${ui.decorationTooltipPrefix}${formatRemarkDisplay(element.remarkName)}` : ""}`;
     item.resourceUri = element.uri;
-    item.contextValue = element.remarkName ? "remarkedNode" : "resourceNode";
+    const base = element.remarkName ? "remarkedNode" : "resourceNode";
+    item.contextValue = element.isDir ? `${base}Dir` : `${base}File`;
     item.iconPath = element.isDir ? vscode.ThemeIcon.Folder : vscode.ThemeIcon.File;
     if (!element.isDir) {
       item.command = {
-        command: "traeFolderRemarks.openResource",
+        command: "folderRemarks.openResource",
         title: "",
         arguments: [element.uri]
       };
@@ -807,11 +1101,9 @@ class RemarkedTreeProvider implements vscode.TreeDataProvider<RemarkedTreeNode> 
 
         const nodes: RemarkedTreeNode[] = [];
         for (const [name, type] of entries) {
-          if (name === STORAGE_DIR_NAME) continue;
           const uri = vscode.Uri.joinPath(rootUri, name);
           const key = resourceKeyFromAnyUri(uri);
           if (!key) continue;
-          if (key === STORAGE_DIR_NAME || key.startsWith(`${STORAGE_DIR_NAME}/`)) continue;
           const isDir = (type & vscode.FileType.Directory) !== 0;
           const remarkName = this.#repo.get(key)?.remarkName;
           nodes.push({
@@ -853,11 +1145,9 @@ class RemarkedTreeProvider implements vscode.TreeDataProvider<RemarkedTreeNode> 
 
     const nodes: RemarkedTreeNode[] = [];
     for (const [name, type] of entries) {
-      if (name === STORAGE_DIR_NAME) continue;
       const uri = vscode.Uri.joinPath(element.uri, name);
       const key = resourceKeyFromAnyUri(uri);
       if (!key) continue;
-      if (key === STORAGE_DIR_NAME || key.startsWith(`${STORAGE_DIR_NAME}/`)) continue;
       const isDir = (type & vscode.FileType.Directory) !== 0;
       const remarkName = this.#repo.get(key)?.remarkName;
       nodes.push({

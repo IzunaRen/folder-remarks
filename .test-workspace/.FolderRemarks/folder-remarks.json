@@ -12,6 +12,12 @@
       "remarkName": "懂得都懂",
       "createdAt": 1775037706747,
       "updatedAt": 1775038553504
+    },
+    ".FolderRemarks": {
+      "folderUri": ".FolderRemarks",
+      "remarkName": "Remarks Storage Folder",
+      "createdAt": 1775100547222,
+      "updatedAt": 1775100547222
     }
   }
 }

@@ -37,7 +37,7 @@ exports.RemarksViewProvider = void 0;
 const vscode = __importStar(require("vscode"));
 const webviewHtml_1 = require("./webviewHtml");
 class RemarksViewProvider {
-    static viewType = "traeFolderRemarksView";
+    static viewType = "folderRemarksView";
     #context;
     #repo;
     #view;
@@ -46,8 +46,8 @@ class RemarksViewProvider {
         this.#repo = args.repo;
         this.#repo.onDidChange(() => void this.refresh());
         vscode.workspace.onDidChangeConfiguration((e) => {
-            if (e.affectsConfiguration("traeFolderRemarks.displayPathStyle") ||
-                e.affectsConfiguration("traeFolderRemarks.language")) {
+            if (e.affectsConfiguration("folderRemarks.displayPathStyle") ||
+                e.affectsConfiguration("folderRemarks.language")) {
                 void this.refresh();
             }
         });
@@ -71,28 +71,28 @@ class RemarksViewProvider {
                 return;
             }
             if (type === "add") {
-                await vscode.commands.executeCommand("traeFolderRemarks.setRemark");
+                await vscode.commands.executeCommand("folderRemarks.setRemark");
                 return;
             }
             if (type === "open") {
                 const folderUri = msg.folderUri;
                 if (typeof folderUri !== "string")
                     return;
-                await vscode.commands.executeCommand("traeFolderRemarks.openResource", resourceKeyToUri(folderUri));
+                await vscode.commands.executeCommand("folderRemarks.openResource", resourceKeyToUri(folderUri));
                 return;
             }
             if (type === "edit") {
                 const folderUri = msg.folderUri;
                 if (typeof folderUri !== "string")
                     return;
-                await vscode.commands.executeCommand("traeFolderRemarks.setRemark", resourceKeyToUri(folderUri));
+                await vscode.commands.executeCommand("folderRemarks.setRemark", resourceKeyToUri(folderUri));
                 return;
             }
             if (type === "delete") {
                 const folderUri = msg.folderUri;
                 if (typeof folderUri !== "string")
                     return;
-                await vscode.commands.executeCommand("traeFolderRemarks.deleteRemark", folderUri);
+                await vscode.commands.executeCommand("folderRemarks.deleteRemark", folderUri);
                 return;
             }
         });
@@ -109,7 +109,7 @@ class RemarksViewProvider {
     buildViewState() {
         const displayPathStyle = vscode.workspace
             .getConfiguration()
-            .get("traeFolderRemarks.displayPathStyle", "relative");
+            .get("folderRemarks.displayPathStyle", "relative");
         const withDisplayPath = this.#repo.list().map((r) => ({
             folderUri: r.folderUri,
             remarkName: formatRemarkDisplay(r.remarkName),
@@ -151,7 +151,7 @@ function resourceKeyToUri(resourceKey) {
 }
 function resolveUiLanguage() {
     const cfg = vscode.workspace.getConfiguration();
-    const raw = cfg.get("traeFolderRemarks.language", "auto");
+    const raw = cfg.get("folderRemarks.language", "auto");
     if (raw === "en" || raw === "zh-cn")
         return raw;
     const envLang = vscode.env.language.toLowerCase();

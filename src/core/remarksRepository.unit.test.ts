@@ -13,7 +13,18 @@ class InMemoryStorage {
 }
 
 class FailingStorage extends InMemoryStorage {
-  override write(): Promise<void> {
+  override write(value: unknown): Promise<void> {
+    void value;
+    return Promise.reject(new Error("write failed"));
+  }
+}
+
+class SeededFailingStorage extends InMemoryStorage {
+  seed(value: unknown): Promise<void> {
+    return super.write(value);
+  }
+  override write(value: unknown): Promise<void> {
+    void value;
     return Promise.reject(new Error("write failed"));
   }
 }
@@ -41,6 +52,69 @@ describe("RemarksRepository", () => {
 
     await repo.clear();
     expect(repo.list().length).toBe(0);
+  });
+
+  test("renameKey/movePrefix/removePrefix", async () => {
+    const storage = new InMemoryStorage();
+    const repo = new RemarksRepository({ storage });
+    await repo.load();
+
+    await repo.upsert({ folderUri: "a", remarkName: "A", now: 1 });
+    await repo.upsert({ folderUri: "a/b", remarkName: "B", now: 2 });
+    await repo.upsert({ folderUri: "a/b/c", remarkName: "C", now: 3 });
+    await repo.upsert({ folderUri: "x", remarkName: "X", now: 4 });
+
+    await repo.renameKey({ fromKey: "x", toKey: "y", now: 10 });
+    expect(repo.get("x")).toBeUndefined();
+    expect(repo.get("y")?.remarkName).toBe("X");
+    expect(repo.get("y")?.updatedAt).toBe(10);
+
+    await repo.movePrefix({ fromPrefix: "a/b", toPrefix: "a/d", now: 11 });
+    expect(repo.get("a/b")).toBeUndefined();
+    expect(repo.get("a/b/c")).toBeUndefined();
+    expect(repo.get("a")?.remarkName).toBe("A");
+    expect(repo.get("a/d")?.remarkName).toBe("B");
+    expect(repo.get("a/d/c")?.remarkName).toBe("C");
+    expect(repo.get("a/d")?.updatedAt).toBe(11);
+    expect(repo.get("a/d/c")?.updatedAt).toBe(11);
+
+    await repo.removePrefix("a/d");
+    expect(repo.get("a/d")).toBeUndefined();
+    expect(repo.get("a/d/c")).toBeUndefined();
+    expect(repo.get("a")?.remarkName).toBe("A");
+  });
+
+  test("error: write failure does not mutate in-memory state for rename/move/removePrefix", async () => {
+    const storage = new FailingStorage();
+    const repo = new RemarksRepository({ storage });
+    await repo.load();
+
+    await expect(repo.upsert({ folderUri: "a", remarkName: "A", now: 1 })).rejects.toThrow("write failed");
+    expect(repo.list()).toEqual([]);
+
+    const okStorage = new InMemoryStorage();
+    const okRepo = new RemarksRepository({ storage: okStorage });
+    await okRepo.load();
+    await okRepo.upsert({ folderUri: "a", remarkName: "A", now: 1 });
+    await okRepo.upsert({ folderUri: "a/b", remarkName: "B", now: 2 });
+
+    const failing2 = new SeededFailingStorage();
+    await failing2.seed(await okStorage.read());
+    const repo2 = new RemarksRepository({ storage: failing2 });
+    await repo2.load();
+
+    await expect(repo2.renameKey({ fromKey: "a", toKey: "x", now: 3 })).rejects.toThrow("write failed");
+    expect(repo2.get("a")?.remarkName).toBe("A");
+    expect(repo2.get("x")).toBeUndefined();
+
+    await expect(repo2.movePrefix({ fromPrefix: "a", toPrefix: "x", now: 4 })).rejects.toThrow("write failed");
+    expect(repo2.get("a")?.remarkName).toBe("A");
+    expect(repo2.get("a/b")?.remarkName).toBe("B");
+    expect(repo2.get("x")).toBeUndefined();
+
+    await expect(repo2.removePrefix("a")).rejects.toThrow("write failed");
+    expect(repo2.get("a")?.remarkName).toBe("A");
+    expect(repo2.get("a/b")?.remarkName).toBe("B");
   });
 
   test("load: ignores invalid persisted payloads", async () => {

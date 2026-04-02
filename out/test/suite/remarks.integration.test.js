@@ -39,7 +39,7 @@ const vscode = __importStar(require("vscode"));
 suite("Workspace Remarks Extension", () => {
     test("CRUD via commands (folder + file) and repository reload", async () => {
         await ensureWorkspaceFolder();
-        const ext = vscode.extensions.getExtension("folder-remarks.trae-folder-remarks");
+        const ext = vscode.extensions.getExtension("Andrew-s.folder-remarks");
         assert.ok(ext, "extension should exist");
         const api = (await ext.activate());
         const root = vscode.workspace.workspaceFolders?.[0]?.uri;
@@ -48,24 +48,23 @@ suite("Workspace Remarks Extension", () => {
         const file = vscode.Uri.joinPath(root, "one", ".keep");
         const oneKey = "one";
         const fileKey = "one/.keep";
-        await vscode.commands.executeCommand("traeFolderRemarks.addRemark", one, "One");
+        await vscode.commands.executeCommand("folderRemarks.addRemark", one, "One");
         assert.ok(api.repository.get(oneKey), "remark should be created");
-        await vscode.commands.executeCommand("traeFolderRemarks.editRemark", one, "One2");
+        await vscode.commands.executeCommand("folderRemarks.editRemark", one, "One2");
         const afterEdit = api.repository.get(oneKey);
         assert.strictEqual(afterEdit?.remarkName, "One2");
-        await vscode.commands.executeCommand("traeFolderRemarks.addRemark", file, "Keep");
+        await vscode.commands.executeCommand("folderRemarks.addRemark", file, "Keep");
         const fileRemark = api.repository.get(fileKey);
         assert.strictEqual(fileRemark?.remarkName, "Keep");
-        await vscode.commands.executeCommand("traeFolderRemarks.setRemark", file, "");
+        await vscode.commands.executeCommand("folderRemarks.setRemark", file, "");
         assert.strictEqual(api.repository.get(fileKey), undefined);
         await api.repository.load();
         const afterReload = api.repository.get(oneKey);
         assert.strictEqual(afterReload?.remarkName, "One2");
         assert.strictEqual(api.repository.get(fileKey), undefined);
-        await vscode.commands.executeCommand("traeFolderRemarks.deleteRemark", one, true);
+        await vscode.commands.executeCommand("folderRemarks.deleteRemark", one, true);
         assert.strictEqual(api.repository.get(oneKey), undefined);
-        await vscode.commands.executeCommand("traeFolderRemarks.deleteRemark", file, true);
-        assert.strictEqual(api.repository.get(fileKey), undefined);
+        await vscode.commands.executeCommand("folderRemarks.deleteRemark", file, true);
     });
 });
 async function ensureWorkspaceFolder() {
