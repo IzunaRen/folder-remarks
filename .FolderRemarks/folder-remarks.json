@@ -48,6 +48,12 @@
       "remarkName": "test demo",
       "createdAt": 1775133649680,
       "updatedAt": 1775133649680
+    },
+    "resources/preview.png": {
+      "folderUri": "resources/preview.png",
+      "remarkName": "示例图片",
+      "createdAt": 1775134096526,
+      "updatedAt": 1775134096526
     }
   }
 }
