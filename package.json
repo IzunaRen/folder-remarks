@@ -2,7 +2,7 @@
   "name": "trae-folder-remarks",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.1.25",
+  "version": "0.1.26",
   "publisher": "folder-remarks",
   "icon": "resources/icon.png",
   "license": "MIT",
@@ -29,6 +29,7 @@
     "onCommand:traeFolderRemarks.addRemark",
     "onCommand:traeFolderRemarks.editRemark",
     "onCommand:traeFolderRemarks.deleteRemark",
+    "onCommand:traeFolderRemarks.revealActiveFile",
     "onCommand:traeFolderRemarks.openResource",
     "onCommand:traeFolderRemarks.openFolder",
     "onCommand:traeFolderRemarks.manageRemarks",
@@ -65,6 +66,15 @@
         "command": "traeFolderRemarks.manageRemarks",
         "title": "%command.manageRemarks.title%",
         "category": "%command.category%"
+      },
+      {
+        "command": "traeFolderRemarks.revealActiveFile",
+        "title": "%command.revealActiveFile.title%",
+        "category": "%command.category%",
+        "icon": {
+          "light": "resources/icon.svg",
+          "dark": "resources/icon.svg"
+        }
       },
       {
         "command": "traeFolderRemarks.debugPing",
@@ -126,6 +136,13 @@
           "group": "inline@6"
         }
       ],
+      "view/title": [
+        {
+          "command": "traeFolderRemarks.revealActiveFile",
+          "when": "view == traeFolderRemarksRemarkedTree",
+          "group": "navigation@1"
+        }
+      ],
       "commandPalette": [
         {
           "command": "traeFolderRemarks.setRemark"
@@ -135,6 +152,9 @@
         },
         {
           "command": "traeFolderRemarks.checkBadges"
+        },
+        {
+          "command": "traeFolderRemarks.revealActiveFile"
         },
         {
           "command": "traeFolderRemarks.debugPing"
@@ -178,6 +198,11 @@
             "%configuration.displayPathStyle.absolute%"
           ],
           "description": "%configuration.displayPathStyle.description%"
+        },
+        "traeFolderRemarks.autoRevealActiveFile": {
+          "type": "boolean",
+          "default": true,
+          "description": "%configuration.autoRevealActiveFile.description%"
         }
       }
     }

@@ -53,7 +53,11 @@ async function activate(context) {
     const repository = new remarksRepository_1.RemarksRepository({ storage });
     await repository.load();
     const remarkedTreeProvider = new RemarkedTreeProvider(repository);
-    context.subscriptions.push(vscode.window.registerTreeDataProvider("traeFolderRemarksRemarkedTree", remarkedTreeProvider));
+    const remarkedTreeView = vscode.window.createTreeView("traeFolderRemarksRemarkedTree", {
+        treeDataProvider: remarkedTreeProvider,
+        showCollapseAll: true
+    });
+    context.subscriptions.push(remarkedTreeView);
     const storageWatcher = createStorageWatcher(storage, repository);
     if (storageWatcher)
         context.subscriptions.push(storageWatcher);
@@ -62,6 +66,62 @@ async function activate(context) {
     context.subscriptions.push(vscode.workspace.onDidChangeConfiguration((e) => {
         if (e.affectsConfiguration("traeFolderRemarks.language"))
             decorationProvider.refresh();
+    }));
+    let lastRevealedActiveEditorUri = "";
+    const revealActiveEditorInRemarkTree = async (focus) => {
+        const editor = vscode.window.activeTextEditor;
+        const uri = editor?.document.uri;
+        if (!uri)
+            return;
+        if (isStorageUri(uri))
+            return;
+        const key = resourceKeyFromAnyUri(uri);
+        if (!key)
+            return;
+        if (key === STORAGE_DIR_NAME || key.startsWith(`${STORAGE_DIR_NAME}/`))
+            return;
+        if (!remarkedTreeView.visible && !focus)
+            return;
+        if (!focus && uri.toString() === lastRevealedActiveEditorUri)
+            return;
+        lastRevealedActiveEditorUri = uri.toString();
+        let isDir = false;
+        try {
+            const stat = await vscode.workspace.fs.stat(uri);
+            isDir = (stat.type & vscode.FileType.Directory) !== 0;
+        }
+        catch {
+            isDir = false;
+        }
+        const name = key === "." ? (vscode.workspace.workspaceFolders?.[0]?.name ?? ".") : key.split("/").pop() ?? key;
+        const element = {
+            id: uri.toString(),
+            name,
+            uri,
+            key,
+            isDir,
+            remarkName: repository.get(key)?.remarkName
+        };
+        try {
+            await remarkedTreeView.reveal(element, { select: true, focus, expand: true });
+        }
+        catch {
+            // ignore
+        }
+    };
+    context.subscriptions.push(vscode.commands.registerCommand("traeFolderRemarks.revealActiveFile", async () => {
+        await revealActiveEditorInRemarkTree(true);
+    }));
+    let autoRevealTimer;
+    context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(() => {
+        const enabled = vscode.workspace.getConfiguration("traeFolderRemarks").get("autoRevealActiveFile", true);
+        if (!enabled)
+            return;
+        if (autoRevealTimer)
+            clearTimeout(autoRevealTimer);
+        autoRevealTimer = setTimeout(() => {
+            void revealActiveEditorInRemarkTree(false);
+        }, 80);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("traeFolderRemarks.checkBadges", async () => {
         const explorerCfg = vscode.workspace.getConfiguration("explorer");
@@ -613,6 +673,29 @@ class RemarkedTreeProvider {
             };
         }
         return item;
+    }
+    getParent(element) {
+        const folders = vscode.workspace.workspaceFolders ?? [];
+        if (folders.length !== 1)
+            return undefined;
+        const key = element.key;
+        if (!key || key === ".")
+            return undefined;
+        const parentKey = key.includes("/") ? key.split("/").slice(0, -1).join("/") : ".";
+        if (parentKey === ".")
+            return undefined;
+        const parentUri = uriFromResourceKey(parentKey);
+        if (!parentUri)
+            return undefined;
+        const name = parentKey.split("/").pop() ?? parentKey;
+        return {
+            id: parentUri.toString(),
+            name,
+            uri: parentUri,
+            key: parentKey,
+            isDir: true,
+            remarkName: this.#repo.get(parentKey)?.remarkName
+        };
     }
     async getChildren(element) {
         const folders = vscode.workspace.workspaceFolders ?? [];

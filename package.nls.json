@@ -8,6 +8,7 @@
   "command.openResource.title": "Open",
   "command.checkBadges.title": "Check Explorer Badges",
   "command.manageRemarks.title": "Manage Remarks",
+  "command.revealActiveFile.title": "Reveal Active File",
   "command.debugPing.title": "Debug: Ping (Show Output)",
   "viewsContainer.title": "Remarks",
   "view.folderRemarks.name": "Remarks",
@@ -19,5 +20,6 @@
   "configuration.language.zhCn": "简体中文",
   "configuration.displayPathStyle.description": "How paths are displayed in the remarks list.",
   "configuration.displayPathStyle.relative": "Show paths relative to the workspace.",
-  "configuration.displayPathStyle.absolute": "Show absolute file system paths."
+  "configuration.displayPathStyle.absolute": "Show absolute file system paths.",
+  "configuration.autoRevealActiveFile.description": "Automatically reveal the active editor file in the Remarks view."
 }
