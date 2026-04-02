@@ -11,3 +11,4 @@ node_modules/**
 .vscode/**
 .FolderRemarks/**
 .test-workspace/**
+npminstall-debug.log

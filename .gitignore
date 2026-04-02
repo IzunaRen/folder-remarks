@@ -4,3 +4,4 @@ node_modules
 .test-workspace
 *.vsix
 .DS_Store
+npminstall-debug.log

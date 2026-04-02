@@ -2,7 +2,7 @@
   "name": "folder-remarks",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.1.36",
+  "version": "0.1.37",
   "publisher": "Andrew-s",
   "icon": "resources/icon.png",
   "license": "MIT",
