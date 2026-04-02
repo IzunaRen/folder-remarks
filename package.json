@@ -2,13 +2,13 @@
   "name": "folder-remarks",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.1.35",
+  "version": "0.1.36",
   "publisher": "Andrew-s",
   "icon": "resources/icon.png",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/trae-demo/folder-remarks"
+    "url": "https://github.com/a952543073/folder-remarks"
   },
   "engines": {
     "vscode": "^1.85.0"
@@ -20,6 +20,22 @@
   },
   "categories": [
     "Other"
+  ],
+  "keywords": [
+    "备注",
+    "文件备注",
+    "文件夹备注",
+    "文件标记",
+    "文件标签",
+    "资源管理器",
+    "workspace",
+    "remark",
+    "remarks",
+    "folder remarks",
+    "note",
+    "annotation",
+    "tag",
+    "label"
   ],
   "main": "./out/extension.js",
   "activationEvents": [
