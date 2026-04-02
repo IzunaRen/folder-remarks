@@ -718,6 +718,42 @@ class RemarkedTreeProvider implements vscode.TreeDataProvider<RemarkedTreeNode> 
   async getChildren(element?: RemarkedTreeNode): Promise<RemarkedTreeNode[]> {
     const folders = vscode.workspace.workspaceFolders ?? [];
     if (!element) {
+      if (folders.length === 1) {
+        const rootUri = folders[0].uri;
+        let entries: [string, vscode.FileType][];
+        try {
+          entries = await vscode.workspace.fs.readDirectory(rootUri);
+        } catch {
+          return [];
+        }
+
+        const nodes: RemarkedTreeNode[] = [];
+        for (const [name, type] of entries) {
+          if (name === STORAGE_DIR_NAME) continue;
+          const uri = vscode.Uri.joinPath(rootUri, name);
+          const key = resourceKeyFromAnyUri(uri);
+          if (!key) continue;
+          if (key === STORAGE_DIR_NAME || key.startsWith(`${STORAGE_DIR_NAME}/`)) continue;
+          const isDir = (type & vscode.FileType.Directory) !== 0;
+          const remarkName = this.#repo.get(key)?.remarkName;
+          nodes.push({
+            id: uri.toString(),
+            name,
+            uri,
+            key,
+            isDir,
+            remarkName
+          });
+        }
+
+        nodes.sort((a, b) => {
+          if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+          return a.name.localeCompare(b.name);
+        });
+
+        return nodes;
+      }
+
       return folders.map((f, idx) => ({
         id: `root:${idx}`,
         name: f.name,
