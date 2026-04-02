@@ -42,6 +42,12 @@
       "remarkName": "哈哈333",
       "createdAt": 1775110249663,
       "updatedAt": 1775110264301
+    },
+    "src/utils": {
+      "folderUri": "src/utils",
+      "remarkName": "test demo",
+      "createdAt": 1775133649680,
+      "updatedAt": 1775133649680
     }
   }
 }
