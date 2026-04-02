@@ -33,6 +33,11 @@
 - 追踪当前文件
 - 刷新
 
+## 快捷键
+
+- 设置备注：`Alt+E`（macOS 通常为 `⌥E`）。在资源管理器或编辑器中使用，可快速对当前选中资源/当前文件执行“设置备注”（命令：`folderRemarks.setRemark`）
+- 自定义：打开 VS Code 的 Keyboard Shortcuts（键盘快捷方式）中搜索 `folderRemarks.setRemark`，按需修改为你习惯的组合键
+
 ## 配置
 
 - `folderRemarks.language`
