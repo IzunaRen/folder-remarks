@@ -624,11 +624,13 @@ class RemarkedTreeProvider implements vscode.TreeDataProvider<RemarkedTreeNode> 
     item.resourceUri = element.uri;
     item.contextValue = element.remarkName ? "remarkedNode" : "resourceNode";
     item.iconPath = element.isDir ? vscode.ThemeIcon.Folder : vscode.ThemeIcon.File;
-    item.command = {
-      command: "traeFolderRemarks.openResource",
-      title: "",
-      arguments: [element.uri]
-    };
+    if (!element.isDir) {
+      item.command = {
+        command: "traeFolderRemarks.openResource",
+        title: "",
+        arguments: [element.uri]
+      };
+    }
     return item;
   }
 

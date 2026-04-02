@@ -2,7 +2,7 @@
   "name": "trae-folder-remarks",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "publisher": "folder-remarks",
   "icon": "resources/icon.png",
   "license": "MIT",
