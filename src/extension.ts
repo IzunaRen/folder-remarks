@@ -297,11 +297,59 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
     return vscode.Uri.file(path.dirname(uri.fsPath));
   };
 
+  let pendingExplorerInlineCreate:
+    | {
+        baseDirFsPath: string;
+        startedAt: number;
+      }
+    | undefined;
+
+  const focusBackToRemarkTree = async (): Promise<void> => {
+    try {
+      await vscode.commands.executeCommand("workbench.view.extension.folderRemarks");
+    } catch {
+      // ignore
+    }
+    try {
+      await vscode.commands.executeCommand("folderRemarksRemarkedTree.focus");
+      return;
+    } catch {
+      // ignore
+    }
+    try {
+      await vscode.commands.executeCommand("workbench.action.focusSideBar");
+    } catch {
+      // ignore
+    }
+  };
+
+  const tryCreateInExplorerWithInlineInput = async (args: {
+    baseDir: vscode.Uri;
+    kind: "file" | "folder";
+  }): Promise<boolean> => {
+    try {
+      const startedAt = Date.now();
+      pendingExplorerInlineCreate = { baseDirFsPath: args.baseDir.fsPath, startedAt };
+      setTimeout(() => {
+        if (pendingExplorerInlineCreate?.startedAt === startedAt) pendingExplorerInlineCreate = undefined;
+      }, 60_000);
+      await vscode.commands.executeCommand("workbench.view.explorer");
+      await vscode.commands.executeCommand("revealInExplorer", args.baseDir);
+      await vscode.commands.executeCommand("workbench.files.action.focusFilesExplorer");
+      await vscode.commands.executeCommand(args.kind === "file" ? "explorer.newFile" : "explorer.newFolder");
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   context.subscriptions.push(
     vscode.commands.registerCommand("folderRemarks.treeNewFile", async (resourceArg?: unknown) => {
       const ui = getUiStrings(resolveUiLanguage());
       const baseDir = await getBaseDirForCreate(resourceArg);
       if (!baseDir) return;
+      const ok = await tryCreateInExplorerWithInlineInput({ baseDir, kind: "file" });
+      if (ok) return;
       const name = await promptNewName({ title: ui.newFileTitle, prompt: ui.newFilePrompt });
       if (!name) return;
       const fileUri = vscode.Uri.file(path.join(baseDir.fsPath, name));
@@ -316,6 +364,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
       const ui = getUiStrings(resolveUiLanguage());
       const baseDir = await getBaseDirForCreate(resourceArg);
       if (!baseDir) return;
+      const ok = await tryCreateInExplorerWithInlineInput({ baseDir, kind: "folder" });
+      if (ok) return;
       const name = await promptNewName({ title: ui.newFolderTitle, prompt: ui.newFolderPrompt });
       if (!name) return;
       const dirUri = vscode.Uri.file(path.join(baseDir.fsPath, name));
@@ -367,6 +417,24 @@ export async function activate(context: vscode.ExtensionContext): Promise<Extens
   context.subscriptions.push(
     vscode.workspace.onDidDeleteFiles((e) => {
       void handleDidDeleteFiles(e);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidCreateFiles((e) => {
+      remarkedTreeProvider.refresh();
+      const pending = pendingExplorerInlineCreate;
+      if (!pending) return;
+      if (Date.now() - pending.startedAt > 60_000) {
+        pendingExplorerInlineCreate = undefined;
+        return;
+      }
+      const matched = e.files.some((f) => path.dirname(f.fsPath) === pending.baseDirFsPath);
+      pendingExplorerInlineCreate = undefined;
+      if (!matched) return;
+      setTimeout(() => {
+        void focusBackToRemarkTree();
+      }, 120);
     })
   );
 

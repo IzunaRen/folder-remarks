@@ -2,7 +2,7 @@
   "name": "folder-remarks",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.1.37",
+  "version": "0.1.45",
   "publisher": "Andrew-s",
   "icon": "resources/icon.png",
   "license": "MIT",
@@ -253,12 +253,12 @@
         },
         {
           "command": "folderRemarks.treeNewFile",
-          "when": "view == folderRemarksRemarkedTree && (viewItem == resourceNodeDir || viewItem == remarkedNodeDir)",
+          "when": "view == folderRemarksRemarkedTree && (viewItem == resourceNodeFile || viewItem == resourceNodeDir || viewItem == remarkedNodeFile || viewItem == remarkedNodeDir)",
           "group": "5_new@1"
         },
         {
           "command": "folderRemarks.treeNewFolder",
-          "when": "view == folderRemarksRemarkedTree && (viewItem == resourceNodeDir || viewItem == remarkedNodeDir)",
+          "when": "view == folderRemarksRemarkedTree && (viewItem == resourceNodeFile || viewItem == resourceNodeDir || viewItem == remarkedNodeFile || viewItem == remarkedNodeDir)",
           "group": "5_new@2"
         }
       ],
