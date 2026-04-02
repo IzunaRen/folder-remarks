@@ -13,7 +13,7 @@
 
 ## 效果预览
 
-![备注树与提示气泡](./resources/preview.png)
+![备注树与提示气泡](https://github.com/a952543073/folder-remarks/blob/main/resources/preview.png?raw=true)
 
 ## 使用方式
 
