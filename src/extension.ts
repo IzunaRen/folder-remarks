@@ -853,6 +853,8 @@ type UiStrings = {
   setActionTooltip: string;
   deleteActionTooltip: string;
   decorationTooltipPrefix: string;
+  createdAtLabel: string;
+  updatedAtLabel: string;
   selectResourceLabel: string;
 };
 
@@ -898,6 +900,8 @@ function getUiStrings(lang: UiLang): UiStrings {
       setActionTooltip: "设置",
       deleteActionTooltip: "删除",
       decorationTooltipPrefix: "备注 ",
+      createdAtLabel: "创建时间：",
+      updatedAtLabel: "修改时间：",
       selectResourceLabel: "选择文件或文件夹"
     };
   }
@@ -933,8 +937,21 @@ function getUiStrings(lang: UiLang): UiStrings {
     setActionTooltip: "Set",
     deleteActionTooltip: "Delete",
     decorationTooltipPrefix: "Remark ",
+    createdAtLabel: "Created: ",
+    updatedAtLabel: "Updated: ",
     selectResourceLabel: "Select File or Folder"
   };
+}
+
+function formatDateTime(ts: number, lang: UiLang): string {
+  const locale = lang === "zh-cn" ? "zh-CN" : "en-US";
+  return new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(ts));
 }
 
 async function promptRemarkName(args: {
@@ -1044,9 +1061,17 @@ class RemarksDecorationProvider implements vscode.FileDecorationProvider {
     if (!key) return undefined;
     const entry = this.#repo.get(key);
     if (!entry?.remarkName) return undefined;
-    const ui = getUiStrings(resolveUiLanguage());
+    const lang = resolveUiLanguage();
+    const ui = getUiStrings(lang);
     const badge = formatDecorationBadge(entry.remarkName);
-    const tooltip = `${key}\n${ui.decorationTooltipPrefix}${formatRemarkDisplay(entry.remarkName)}`;
+    const remarkLineCore = `${ui.decorationTooltipPrefix}${formatRemarkDisplay(entry.remarkName)}`;
+    const tooltip = [
+      "",
+      remarkLineCore,
+      `${ui.createdAtLabel}${formatDateTime(entry.createdAt, lang)}`,
+      `${ui.updatedAtLabel}${formatDateTime(entry.updatedAt, lang)}`,
+      ""
+    ].join("\n");
     return { badge, tooltip };
   }
 }
@@ -1098,8 +1123,6 @@ class RemarkedTreeProvider implements vscode.TreeDataProvider<RemarkedTreeNode> 
       element.isDir ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None
     );
     item.description = element.remarkName ? formatRemarkDisplay(element.remarkName) : undefined;
-    const ui = getUiStrings(resolveUiLanguage());
-    item.tooltip = `${element.key}${element.remarkName ? `\n${ui.decorationTooltipPrefix}${formatRemarkDisplay(element.remarkName)}` : ""}`;
     item.resourceUri = element.uri;
     const base = element.remarkName ? "remarkedNode" : "resourceNode";
     item.contextValue = element.isDir ? `${base}Dir` : `${base}File`;
