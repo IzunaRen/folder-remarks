@@ -4,7 +4,6 @@ import { RemarksRepository, type RemarksStorageLike } from "./core/remarksReposi
 
 const STORAGE_DIR_NAME = ".FolderRemarks";
 const STORAGE_FILE_NAME = "folder-remarks.json";
-const LEGACY_VSCODE_FILE_NAME = "folder-remarks.json";
 const DEFAULT_REMARK_CORE = "无";
 
 export type ExtensionApi = {
@@ -539,7 +538,6 @@ async function ensureStorageDefaultRemarks(repo: RemarksRepository): Promise<voi
 
   const dirKey = STORAGE_DIR_NAME;
   const fileKey = `${STORAGE_DIR_NAME}/${STORAGE_FILE_NAME}`;
-  const legacyKey = `.vscode/${LEGACY_VSCODE_FILE_NAME}`;
 
   try {
     if (!repo.get(dirKey)) {
@@ -547,16 +545,6 @@ async function ensureStorageDefaultRemarks(repo: RemarksRepository): Promise<voi
     }
     if (!repo.get(fileKey)) {
       await repo.upsert({ folderUri: fileKey, remarkName: defaults.file });
-    }
-
-    const legacyFileUri = vscode.Uri.joinPath(root, ".vscode", LEGACY_VSCODE_FILE_NAME);
-    try {
-      await vscode.workspace.fs.stat(legacyFileUri);
-      if (!repo.get(legacyKey)) {
-        await repo.upsert({ folderUri: legacyKey, remarkName: defaults.legacyFile });
-      }
-    } catch {
-      // ignore
     }
   } catch {
     // ignore
@@ -602,20 +590,11 @@ async function createRemarksStorage(args: {
 
   const storageDirUri = vscode.Uri.joinPath(root, STORAGE_DIR_NAME);
   const storageFileUri = vscode.Uri.joinPath(storageDirUri, STORAGE_FILE_NAME);
-  const legacyVsCodeFileUri = vscode.Uri.joinPath(root, ".vscode", LEGACY_VSCODE_FILE_NAME);
 
   const fileStorage: RemarksStorageLike = {
     read: async () => {
       try {
         if (!(await uriExists(storageFileUri))) {
-          if (await uriExists(legacyVsCodeFileUri)) {
-            const legacyBytes = await vscode.workspace.fs.readFile(legacyVsCodeFileUri);
-            const legacyText = new TextDecoder("utf-8").decode(legacyBytes);
-            const legacyParsed = JSON.parse(legacyText) as unknown;
-            const migrated = migrateRemarksToRelativeKeys(legacyParsed);
-            await writeJsonFile({ fileUri: storageFileUri, dirUri: storageDirUri, value: migrated ?? legacyParsed });
-            return migrated ?? legacyParsed;
-          }
           return undefined;
         }
         const bytes = await vscode.workspace.fs.readFile(storageFileUri);

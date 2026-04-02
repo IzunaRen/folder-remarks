@@ -51,10 +51,6 @@
 
 - `.FolderRemarks/folder-remarks.json`
 
-如检测到旧版存储文件，会自动迁移到新位置：
-
-- `.vscode/folder-remarks.json` → `.FolderRemarks/folder-remarks.json`
-
 ## 兼容性说明
 
 - 建议在“单文件夹工作区”使用（当前存储与部分路径解析以第一个工作区文件夹为准）
