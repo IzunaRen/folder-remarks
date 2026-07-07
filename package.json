@@ -2,7 +2,7 @@
   "name": "folder-remarks",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.1.60",
+  "version": "0.1.60-1",
   "publisher": "Andrew-s",
   "icon": "resources/icon.png",
   "license": "MIT",
@@ -204,12 +204,12 @@
         {
           "command": "folderRemarks.setRemark",
           "when": "view == folderRemarksRemarkedTree && (viewItem == resourceNodeFile || viewItem == resourceNodeDir || viewItem == remarkedNodeFile || viewItem == remarkedNodeDir)",
-          "group": "inline@5"
+          "group": "1_remark@1"
         },
         {
           "command": "folderRemarks.deleteRemark",
           "when": "view == folderRemarksRemarkedTree && (viewItem == remarkedNodeFile || viewItem == remarkedNodeDir)",
-          "group": "inline@6"
+          "group": "1_remark@2"
         },
         {
           "command": "folderRemarks.openResource",

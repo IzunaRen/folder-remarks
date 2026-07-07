@@ -110,6 +110,32 @@ export function renderRemarksWebviewHtml(args: {
         color: var(--vscode-foreground);
         padding: 4px 8px;
       }
+      .context-menu {
+        position: fixed;
+        background: var(--vscode-menu-background);
+        border: 1px solid var(--vscode-menu-border);
+        border-radius: 4px;
+        padding: 4px 0;
+        z-index: 1000;
+        min-width: 120px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      }
+      .context-menu-item {
+        display: block;
+        width: 100%;
+        padding: 6px 12px;
+        border: none;
+        background: transparent;
+        color: var(--vscode-menu-foreground);
+        text-align: left;
+        cursor: pointer;
+        font-size: inherit;
+        font-family: inherit;
+      }
+      .context-menu-item:hover {
+        background: var(--vscode-menu-selectionBackground);
+        color: var(--vscode-menu-selectionForeground);
+      }
       .empty {
         opacity: 0.8;
         margin-top: 14px;
@@ -160,13 +186,12 @@ export function renderRemarksWebviewHtml(args: {
         for (const r of items) {
           const item = document.createElement("div");
           item.className = "item";
+          item.dataset.uri = r.folderUri;
           item.innerHTML = \`
             <div class="title">
               <div class="name">\${escapeHtml(r.remarkName || "【无】")}</div>
               <div class="actions">
                 <button class="action" data-act="open" data-uri="\${encodeAttr(r.folderUri)}">\${escapeHtml(state.ui.actionOpen)}</button>
-                <button class="action" data-act="edit" data-uri="\${encodeAttr(r.folderUri)}">\${escapeHtml(state.ui.actionSet)}</button>
-                <button class="action" data-act="delete" data-uri="\${encodeAttr(r.folderUri)}">\${escapeHtml(state.ui.actionDelete)}</button>
               </div>
             </div>
             <div class="path">\${escapeHtml(displayPath(r.folderUri))}</div>
@@ -177,7 +202,40 @@ export function renderRemarksWebviewHtml(args: {
             if (!act || !uri) return;
             vscode.postMessage({ type: act, folderUri: uri });
           });
+          item.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            showContextMenu(e, r.folderUri);
+          });
           listEl.appendChild(item);
+        }
+      }
+
+      let contextMenuEl = null;
+
+      function showContextMenu(e, folderUri) {
+        closeContextMenu();
+        contextMenuEl = document.createElement("div");
+        contextMenuEl.className = "context-menu";
+        contextMenuEl.style.left = e.clientX + "px";
+        contextMenuEl.style.top = e.clientY + "px";
+        contextMenuEl.innerHTML = \`
+          <button class="context-menu-item" data-act="edit" data-uri="\${encodeAttr(folderUri)}">\${escapeHtml(state.ui.actionSet)}</button>
+          <button class="context-menu-item" data-act="delete" data-uri="\${encodeAttr(folderUri)}">\${escapeHtml(state.ui.actionDelete)}</button>
+        \`;
+        contextMenuEl.addEventListener("click", (ev) => {
+          const act = ev.target?.dataset?.act;
+          const uri = ev.target?.dataset?.uri;
+          if (!act || !uri) return;
+          vscode.postMessage({ type: act, folderUri: uri });
+          closeContextMenu();
+        });
+        document.body.appendChild(contextMenuEl);
+      }
+
+      function closeContextMenu() {
+        if (contextMenuEl) {
+          contextMenuEl.remove();
+          contextMenuEl = null;
         }
       }
 
@@ -218,6 +276,10 @@ export function renderRemarksWebviewHtml(args: {
           state.ui = msg.ui ?? state.ui;
           render();
         }
+      });
+
+      document.addEventListener("click", () => {
+        closeContextMenu();
       });
 
       render();

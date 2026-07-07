@@ -37,12 +37,6 @@
       "createdAt": 1775100915233,
       "updatedAt": 1775100915233
     },
-    "out": {
-      "folderUri": "out",
-      "remarkName": "哈哈333",
-      "createdAt": 1775110249663,
-      "updatedAt": 1775110264301
-    },
     "src/utils": {
       "folderUri": "src/utils",
       "remarkName": "test demo",
